@@ -30,7 +30,13 @@
       ]
     ]
   },
-  "dependencies": {},
+  "dependencies": {
+    "@pulumi/aws": "^1.16.0",
+    "@pulumi/awsx": "^0.18.14",
+    "@pulumi/pulumi": "^1.8.1",
+    "@pulumi/tls": "^1.4.0",
+    "lodash": "^4.17.15"
+  },
   "devDependencies": {
     "@babel/cli": "^7.7.7",
     "@babel/core": "^7.7.7",

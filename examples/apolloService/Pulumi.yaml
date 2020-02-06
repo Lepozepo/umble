@@ -1,0 +1,3 @@
+name: umble-apollo-service
+runtime: nodejs
+description: Fargate via Umble
