@@ -32,7 +32,22 @@ exports.url = pulumi.interpolate`http://${api.httpListener.endpoint.hostname}`;
 The values expressed are defaults. The only required variable is image.
 
 #### StaticWebApp
-TBA
+Here is a quick example on how to use it with create react app. It can be used with any static site or static site generator.
+
+```
+const pulumi = require('@pulumi/pulumi');
+const { StaticWebApp } = require('umble');
+
+const webapp = new StaticWebApp('webapp', {
+  buildDir: './webapp/build/',
+  buildCmd: 'cd ./webapp && yarn build',
+  environment: {
+    REACT_APP_ENVIRONMENT: 'PRODUCTION',
+  },
+});
+
+exports.url = pulumi.interpolate`http://${webapp.bucket.websiteEndpoint}`;
+```
 
 #### Serverless
 TBA
