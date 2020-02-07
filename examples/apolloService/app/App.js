@@ -1,4 +1,6 @@
-const { ApolloServer, gql } = require('apollo-server');
+const { ApolloServer, gql, PubSub } = require('apollo-server');
+
+const pubsub = new PubSub();
 
 const typeDefs = gql`
   type Book {
@@ -8,6 +10,14 @@ const typeDefs = gql`
 
   type Query {
     books: [Book]
+  }
+
+  type Subscription {
+    bookAdded: Book
+  }
+
+  type Mutation {
+    addBook(author: String, title: String): Book
   }
 `;
 
@@ -23,8 +33,20 @@ const books = [
 ];
 
 const resolvers = {
+  Subscription: {
+    bookAdded: {
+      subscribe: () => pubsub.asyncIterator(['BOOK_ADDED']),
+    },
+  },
   Query: {
     books: () => books,
+  },
+  Mutation: {
+    addBook(_, book) {
+      pubsub.publish('BOOK_ADDED', { bookAdded: book });
+      books.push(book);
+      return book;
+    },
   },
 };
 
@@ -35,7 +57,7 @@ const server = new ApolloServer({
   introspection: true,
 });
 
-// The `listen` method launches a web server.
-server.listen().then(({ url }) => {
+server.listen().then(({ url, subscriptionsUrl }) => {
   console.log(`Server ready at ${url}`);
+  console.log(`Subscriptions ready at ${subscriptionsUrl}`);
 });
