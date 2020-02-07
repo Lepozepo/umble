@@ -1,11 +1,15 @@
-const pulumi = require('@pulumi/pulumi');
-const aws = require('@pulumi/aws');
-const awsx = require('@pulumi/awsx');
-const tls = require('@pulumi/tls');
-const isFunction = require('lodash/isFunction');
-const isObject = require('lodash/isObject');
+import pulumi from '@pulumi/pulumi';
+import aws from '@pulumi/aws';
+import awsx from '@pulumi/awsx';
+import tls from '@pulumi/tls';
+import {
+  isFunction,
+  isObject,
+  isNil,
+  omitBy,
+} from 'lodash';
 
-module.exports = class Service extends pulumi.ComponentResource {
+export default class Service extends pulumi.ComponentResource {
   constructor(name, props = {}, ops) {
     super('umble:service:Service', name, {}, ops);
 
@@ -14,6 +18,8 @@ module.exports = class Service extends pulumi.ComponentResource {
       environment: _environment,
       memory = 512,
       exposePort: port = 4000,
+      useSelfSignedSSL = false,
+      policyArn = aws.iam.AdministratorAccess,
     } = props;
 
     const vpc = props.vpc || awsx.ec2.Vpc.getDefault() || new awsx.ec2.Vpc(`${name}-vpc`, {}, { parent: this });
@@ -51,36 +57,55 @@ module.exports = class Service extends pulumi.ComponentResource {
     const httpListener = containerTarget.createListener(`${name}-http`, { port: 80 }, { parent: this });
     this.httpListener = httpListener;
 
-    const privateKey = new tls.PrivateKey(`${name}-pk`, {
-      algorithm: 'RSA',
-    }, { parent: this });
+    let httpsListener;
+    if (useSelfSignedSSL) {
+      const privateKey = new tls.PrivateKey(`${name}-pk`, {
+        algorithm: 'RSA',
+      }, { parent: this });
 
-    const selfSignedCert = new tls.SelfSignedCert(`${name}-certbody`, {
-      allowedUses: [
-        'keyEncipherment',
-        'digitalSignature',
-        'serverAuth',
-      ],
-      keyAlgorithm: 'RSA',
-      privateKeyPem: privateKey.privateKeyPem,
-      subjects: [{
-        commonName: '*.amazonaws.com',
-        organization: 'differential',
-      }],
-      validityPeriodHours: 8640,
-    }, { parent: this });
+      const selfSignedCert = new tls.SelfSignedCert(`${name}-certbody`, {
+        allowedUses: [
+          'keyEncipherment',
+          'digitalSignature',
+          'serverAuth',
+        ],
+        keyAlgorithm: 'RSA',
+        privateKeyPem: privateKey.privateKeyPem,
+        subjects: [{
+          commonName: '*.amazonaws.com',
+          organization: 'differential',
+        }],
+        validityPeriodHours: 8640,
+      }, { parent: this });
 
-    const cert = new aws.acm.Certificate(`${name}-cert`, {
-      certificateBody: selfSignedCert.certPem,
-      privateKey: privateKey.privateKeyPem,
-    }, { parent: this });
+      const cert = new aws.acm.Certificate(`${name}-cert`, {
+        certificateBody: selfSignedCert.certPem,
+        privateKey: privateKey.privateKeyPem,
+      }, { parent: this });
 
-    const httpsListener = containerTarget.createListener(`${name}-https`, {
-      port: 443,
-      certificateArn: cert.arn,
-      sslPolicy: 'ELBSecurityPolicy-2016-08',
+      httpsListener = containerTarget.createListener(`${name}-https`, {
+        port: 443,
+        certificateArn: cert.arn,
+        sslPolicy: 'ELBSecurityPolicy-2016-08',
+      }, { parent: this });
+      this.httpsListener = httpsListener;
+    }
+
+    const role = new aws.iam.Role(`${name}-dpl-role`, {
+      assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({
+        Service: [
+          'ecs-tasks.amazonaws.com',
+          'ecs.amazonaws.com',
+        ],
+      }),
     }, { parent: this });
-    this.httpsListener = httpsListener;
+    this.role = role;
+
+    const rolePolicyAttachment = new aws.iam.RolePolicyAttachment(`${name}-rpa`, {
+      policyArn,
+      role,
+    }, { parent: this });
+    this.rolePolicyAttachment = rolePolicyAttachment;
 
     let environment = _environment;
     if (isFunction(_environment)) {
@@ -100,22 +125,6 @@ module.exports = class Service extends pulumi.ComponentResource {
           value: entryValue,
         }));
     }
-
-    const role = new aws.iam.Role(`${name}-dpl-role`, {
-      assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({
-        Service: [
-          'ecs-tasks.amazonaws.com',
-          'ecs.amazonaws.com',
-        ],
-      }),
-    }, { parent: this });
-    this.role = role;
-
-    const rolePolicyAttachment = new aws.iam.RolePolicyAttachment(`${name}-rpa`, {
-      policyArn: props.policyArn || aws.iam.AdministratorAccess,
-      role,
-    }, { parent: this });
-    this.rolePolicyAttachment = rolePolicyAttachment;
 
     const service = new awsx.ecs.FargateService(`${name}-service`, {
       cluster,
@@ -171,19 +180,19 @@ module.exports = class Service extends pulumi.ComponentResource {
     }, { parent: this });
     this.asgMemoryPolicy = asgMemoryPolicy;
 
-    this.registerOutputs({
+    this.registerOutputs(omitBy({
       vpc,
       cluster,
       loadBalancer,
       containerTarget,
       httpListener,
-      // httpsListener,
+      httpsListener,
       service,
       role,
       rolePolicyAttachment,
       asgTarget,
       asgCPUPolicy,
       asgMemoryPolicy,
-    });
+    }, isNil));
   }
-};
+}

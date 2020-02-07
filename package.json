@@ -8,8 +8,8 @@
     "url": "https://github.com/lepozepo/umble"
   },
   "scripts": {
-    "pack:build": "pack build",
-    "pack:publish": "pack publish",
+    "pack:build": "pika build",
+    "pack:publish": "pika publish",
     "test": "npx npm-run-all --parallel test:*",
     "test:lint": "eslint ./src --quiet -c ./.eslintrc.js",
     "test:unit": "jest --ci --passWithNoTests",
@@ -38,12 +38,11 @@
     "lodash": "^4.17.15"
   },
   "devDependencies": {
-    "@babel/cli": "^7.7.7",
-    "@babel/core": "^7.7.7",
-    "@babel/node": "^7.7.7",
-    "@babel/plugin-proposal-class-properties": "^7.7.4",
-    "@babel/plugin-proposal-optional-chaining": "^7.7.5",
-    "@babel/preset-env": "^7.7.7",
+    "@babel/core": "^7.8.4",
+    "@babel/node": "^7.8.4",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-proposal-optional-chaining": "^7.8.3",
+    "@babel/preset-react": "^7.8.3",
     "@pika/pack": "^0.5.0",
     "@pika/plugin-build-node": "^0.8.1",
     "@pika/plugin-standard-pkg": "^0.8.1",
@@ -56,6 +55,6 @@
     "jest": "^24.9.0"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": "Marcelo Reyna <lepozepo@gmail.com>",
+  "license": "MIT"
 }

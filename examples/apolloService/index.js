@@ -1,6 +1,6 @@
 const pulumi = require('@pulumi/pulumi');
 const awsx = require('@pulumi/awsx');
-const Service = require('../../src/Service');
+const { Service } = require('../../pkg/dist-node');
 
 const api = new Service('umble', {
   image: awsx.ecs.Image.fromPath('umble-test', './app'),
