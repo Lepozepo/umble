@@ -35,7 +35,9 @@
     "@pulumi/awsx": "^0.18.14",
     "@pulumi/pulumi": "^1.8.1",
     "@pulumi/tls": "^1.4.0",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.15",
+    "mime": "^2.4.4",
+    "recursive-readdir-sync": "^1.0.6"
   },
   "devDependencies": {
     "@babel/core": "^7.8.4",
