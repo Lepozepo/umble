@@ -1,6 +1,6 @@
 {
   "name": "umble",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Humble Pulumi Constructs for every app",
   "main": "index.js",
   "repository": {
