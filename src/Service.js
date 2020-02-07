@@ -20,6 +20,10 @@ export default class Service extends pulumi.ComponentResource {
       exposePort: port = 4000,
       useSelfSignedSSL = false,
       policyArn = aws.iam.AdministratorAccess,
+      maxScalingCapacity: maxCapacity = 4,
+      cpuScalingValue = 70,
+      memoryScalingValue = 70,
+      healthCheckUrl = '/.well-known/apollo/server-health',
     } = props;
 
     const vpc = props.vpc || awsx.ec2.Vpc.getDefault() || new awsx.ec2.Vpc(`${name}-vpc`, {}, { parent: this });
@@ -40,7 +44,7 @@ export default class Service extends pulumi.ComponentResource {
       protocol: 'HTTP',
       port,
       healthCheck: {
-        path: '/.well-known/apollo/server-health',
+        path: healthCheckUrl,
         port: port.toString(),
         protocol: 'HTTP',
         interval: 15,
@@ -143,7 +147,7 @@ export default class Service extends pulumi.ComponentResource {
     this.service = service;
 
     const asgTarget = new aws.appautoscaling.Target(`${name}-asg-target`, {
-      maxCapacity: 4,
+      maxCapacity,
       minCapacity: 1,
       resourceId: pulumi.interpolate`service/${cluster.cluster.name}/${service.service.name}`,
       roleArn: role.arn,
@@ -161,7 +165,7 @@ export default class Service extends pulumi.ComponentResource {
         predefinedMetricSpecification: {
           predefinedMetricType: 'ECSServiceAverageCPUUtilization',
         },
-        targetValue: 70,
+        targetValue: cpuScalingValue,
       },
     }, { parent: this });
     this.asgCPUPolicy = asgCPUPolicy;
@@ -175,7 +179,7 @@ export default class Service extends pulumi.ComponentResource {
         predefinedMetricSpecification: {
           predefinedMetricType: 'ECSServiceAverageMemoryUtilization',
         },
-        targetValue: 70,
+        targetValue: memoryScalingValue,
       },
     }, { parent: this });
     this.asgMemoryPolicy = asgMemoryPolicy;

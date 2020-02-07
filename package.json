@@ -1,7 +1,7 @@
 {
   "name": "umble",
   "version": "1.0.2",
-  "description": "Humble Pulumi Constructs for every app",
+  "description": "Humble Pulumi Constructs for Apollo/React Developers",
   "main": "index.js",
   "repository": {
     "type": "git",
