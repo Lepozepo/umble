@@ -3,6 +3,7 @@ import aws from '@pulumi/aws';
 import readdirp from 'recursive-readdir-sync';
 import mime from 'mime';
 import cp from 'child_process';
+import path from 'path';
 import isEmpty from 'lodash/isEmpty';
 
 export default class StaticWebApp extends pulumi.ComponentResource {
@@ -119,7 +120,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
           new aws.s3.BucketObject(dir, {
             bucket,
             source: new pulumi.asset.FileAsset(dir),
-            key: dir.replace(buildDir, ''),
+            key: path.relative(buildDir, dir),
             contentType: mime.getType(dir) || undefined,
           }, { parent: this });
         }
@@ -131,7 +132,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
         new aws.s3.BucketObject(dir, { 
           bucket,
           source: new pulumi.asset.FileAsset(dir),
-          key: dir.replace(buildDir, ''),
+          key: path.relative(buildDir, dir),
           contentType: mime.getType(dir) || undefined,
         }, { parent: this });
       }
