@@ -1,0 +1,3 @@
+name: umble-apollo-lambda
+runtime: nodejs
+description: Lambda via Umble
