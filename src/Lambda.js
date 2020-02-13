@@ -6,6 +6,10 @@ import {
   isNil,
   omitBy,
 } from 'lodash';
+import p from 'path';
+import cp from 'child_process';
+import readdirp from 'recursive-readdir-sync';
+import fs from 'fs';
 
 // TODO: Add websockets
 
@@ -20,12 +24,17 @@ export default class Lambda extends pulumi.ComponentResource {
       timeout = 300,
       runtime = aws.lambda.NodeJS10dXRuntime,
       environment,
+      memorySize = 128,
       reservedConcurrentExecutions = -1,
       provisionedConcurrentExecutions = 0,
       layers = [],
       stageName = 'stage',
       allowedActions = [],
+      buildCmd,
     } = props;
+
+    const installer = fs.existsSync(`${source}/yarn.lock`) ? 'yarn' : 'npm';
+    cp.execSync(buildCmd || `cd ${source} && ${installer} install --production && cd ../`, { stdio: 'inherit' });
 
     const role = new aws.iam.Role(`${name}-role`, {
       assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: 'lambda.amazonaws.com' }),
@@ -45,7 +54,7 @@ export default class Lambda extends pulumi.ComponentResource {
     }, { parent: this });
     this.policy = policy;
 
-    const deployBucket = new aws.s3.Bucket(`${name}-lambdaBucket`, {
+    const srcBucket = new aws.s3.Bucket(`${name}-lambdaBucket`, {
       forceDestroy: true,
     }, { parent: this });
 
@@ -55,22 +64,35 @@ export default class Lambda extends pulumi.ComponentResource {
     this.layerId = layerId;
 
     const layerSrc = new aws.s3.BucketObject(`${name}-layerSrc`, {
-      bucket: deployBucket.bucket,
+      bucket: srcBucket.bucket,
       source: new pulumi.asset.AssetArchive({
         'nodejs/node_modules': new pulumi.asset.FileArchive(`${source}/node_modules`),
         'nodejs/package.json': new pulumi.asset.FileAsset(`${source}/package.json`),
       }),
-      key: 'nodejs.zip',
+      key: 'dependencies.zip',
     }, { parent: this });
     this.layerSrc = layerSrc;
 
     const layer = new aws.lambda.LayerVersion(`${name}-layer`, {
       compatibleRuntimes: [runtime],
-      s3Bucket: deployBucket.bucket,
+      s3Bucket: srcBucket.bucket,
       s3Key: layerSrc.key,
       layerName: pulumi.interpolate`${name}-${layerId.hex}-layer`,
     }, { parent: this });
     this.layer = layer;
+
+    const lambdaAssetMap = {};
+    readdirp(source).forEach((srcObject) => {
+      if (srcObject.includes('node_modules')) return;
+      lambdaAssetMap[p.relative(source, srcObject)] = new pulumi.asset.FileAsset(srcObject);
+    });
+
+    const lambdaSrc = new aws.s3.BucketObject(`${name}-lambdaSrc`, {
+      bucket: srcBucket.bucket,
+      source: new pulumi.asset.AssetArchive(lambdaAssetMap),
+      key: 'source.zip',
+    }, { parent: this });
+    this.lambdaSrc = lambdaSrc;
 
     const lambda = new aws.lambda.Function(`${name}-lambda`, {
       runtime,
@@ -78,10 +100,10 @@ export default class Lambda extends pulumi.ComponentResource {
       handler,
       environment,
       reservedConcurrentExecutions,
+      memorySize,
       layers: [layer, ...layers],
-      code: new pulumi.asset.AssetArchive({
-        '.': new pulumi.asset.FileArchive(source),
-      }),
+      s3Bucket: srcBucket.bucket,
+      s3Key: lambdaSrc.key,
       role: role.arn,
       publish: true, // Required for provisioned concurrency
     }, { parent: this });
