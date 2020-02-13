@@ -34,6 +34,7 @@
     "@pulumi/aws": "^1.16.0",
     "@pulumi/awsx": "^0.18.14",
     "@pulumi/pulumi": "^1.8.1",
+    "@pulumi/random": "^1.5.0",
     "@pulumi/tls": "^1.4.0",
     "lodash": "^4.17.15",
     "mime": "^2.4.4",

@@ -1,17 +1,20 @@
 import pulumi from '@pulumi/pulumi';
 import aws from '@pulumi/aws';
 import awsx from '@pulumi/awsx';
+import random from '@pulumi/random';
 import {
   isNil,
   omitBy,
 } from 'lodash';
+
+// TODO: Add websockets
 
 export default class Lambda extends pulumi.ComponentResource {
   constructor(name, props = {}, ops) {
     super('umble:lambda:Lambda', name, {}, ops);
 
     const {
-      code,
+      source,
       handler = 'index.default',
       path = '/',
       timeout = 300,
@@ -19,6 +22,7 @@ export default class Lambda extends pulumi.ComponentResource {
       environment,
       reservedConcurrentExecutions = -1,
       provisionedConcurrentExecutions = 0,
+      layers = [],
       stageName = 'stage',
       allowedActions = [],
     } = props;
@@ -38,19 +42,49 @@ export default class Lambda extends pulumi.ComponentResource {
           Effect: 'Allow',
         }],
       }),
-    });
+    }, { parent: this });
     this.policy = policy;
+
+    const deployBucket = new aws.s3.Bucket(`${name}-lambdaBucket`, {
+      forceDestroy: true,
+    }, { parent: this });
+
+    const layerId = new random.RandomId(`${name}-layerId`, {
+      byteLength: 3,
+    }, { parent: this });
+    this.layerId = layerId;
+
+    const layerSrc = new aws.s3.BucketObject(`${name}-layerSrc`, {
+      bucket: deployBucket.bucket,
+      source: new pulumi.asset.AssetArchive({
+        'nodejs/node_modules': new pulumi.asset.FileArchive(`${source}/node_modules`),
+        'nodejs/package.json': new pulumi.asset.FileAsset(`${source}/package.json`),
+      }),
+      key: 'nodejs.zip',
+    }, { parent: this });
+    this.layerSrc = layerSrc;
+
+    const layer = new aws.lambda.LayerVersion(`${name}-layer`, {
+      compatibleRuntimes: [runtime],
+      s3Bucket: deployBucket.bucket,
+      s3Key: layerSrc.key,
+      layerName: pulumi.interpolate`${name}-${layerId.hex}-layer`,
+    }, { parent: this });
+    this.layer = layer;
 
     const lambda = new aws.lambda.Function(`${name}-lambda`, {
       runtime,
-      code,
       timeout,
       handler,
       environment,
       reservedConcurrentExecutions,
+      layers: [layer, ...layers],
+      code: new pulumi.asset.AssetArchive({
+        '.': new pulumi.asset.FileArchive(source),
+      }),
       role: role.arn,
       publish: true, // Required for provisioned concurrency
-    });
+    }, { parent: this });
     this.lambda = lambda;
 
     let concurrency;
@@ -59,7 +93,7 @@ export default class Lambda extends pulumi.ComponentResource {
         functionName: lambda.name,
         qualifier: lambda.version,
         provisionedConcurrentExecutions,
-      });
+      }, { parent: this });
       this.concurrency = concurrency;
     }
 
@@ -77,7 +111,7 @@ export default class Lambda extends pulumi.ComponentResource {
           eventHandler: lambda,
         },
       ],
-    });
+    }, { parent: this });
     this.api = api;
 
     this.registerOutputs(omitBy({
