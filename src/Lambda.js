@@ -10,8 +10,7 @@ import p from 'path';
 import cp from 'child_process';
 import readdirp from 'recursive-readdir-sync';
 import fs from 'fs';
-
-// TODO: Add websockets
+import WebsocketApi from './WebsocketApi';
 
 export default class Lambda extends pulumi.ComponentResource {
   constructor(name, props = {}, ops) {
@@ -31,6 +30,7 @@ export default class Lambda extends pulumi.ComponentResource {
       stageName = 'stage',
       allowedActions = [],
       buildCmd,
+      withWebsockets = false,
     } = props;
 
     const installer = fs.existsSync(`${source}/yarn.lock`) ? 'yarn' : 'npm';
@@ -136,12 +136,18 @@ export default class Lambda extends pulumi.ComponentResource {
     }, { parent: this });
     this.api = api;
 
+    let websocketApi;
+    if (withWebsockets) {
+      websocketApi = new WebsocketApi(`${name}-ws`, { test: 3 }, { parent: this });
+    }
+
     this.registerOutputs(omitBy({
       role,
       policy,
       lambda,
       concurrency,
       api,
+      websocketApi,
     }, isNil));
   }
 }
