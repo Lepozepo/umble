@@ -19,7 +19,7 @@ export default class Lambda extends pulumi.ComponentResource {
 
     const {
       source,
-      httpHandler = 'index.http',
+      handler = 'index.http',
       websockets = {},
       path = '/',
       timeout = 300,
@@ -95,10 +95,10 @@ export default class Lambda extends pulumi.ComponentResource {
     }, { parent: this });
     this.lambdaSrc = lambdaSrc;
 
-    const lambda = new aws.lambda.Function(`${name}-lambda`, {
+    const lambdaConfig = {
       runtime,
       timeout,
-      handler: httpHandler,
+      handler,
       environment,
       reservedConcurrentExecutions,
       memorySize,
@@ -107,14 +107,15 @@ export default class Lambda extends pulumi.ComponentResource {
       s3Key: lambdaSrc.key,
       role: role.arn,
       publish: true, // Required for provisioned concurrency
-    }, { parent: this });
-    this.lambda = lambda;
+    };
+    const httpLambda = new aws.lambda.Function(`${name}-httpLambda`, lambdaConfig, { parent: this });
+    this.httpLambda = httpLambda;
 
     let concurrency;
     if (provisionedConcurrentExecutions > 0) {
       concurrency = new aws.lambda.ProvisionedConcurrencyConfig(`${name}-concurrency`, {
-        functionName: lambda.name,
-        qualifier: lambda.version,
+        functionName: httpLambda.name,
+        qualifier: httpLambda.version,
         provisionedConcurrentExecutions,
       }, { parent: this });
       this.concurrency = concurrency;
@@ -126,12 +127,12 @@ export default class Lambda extends pulumi.ComponentResource {
         {
           path,
           method: 'POST',
-          eventHandler: lambda,
+          eventHandler: httpLambda,
         },
         {
           path,
           method: 'GET',
-          eventHandler: lambda,
+          eventHandler: httpLambda,
         },
       ],
     }, { parent: this });
@@ -146,17 +147,40 @@ export default class Lambda extends pulumi.ComponentResource {
         ...otherWebsocketProps
       } = websockets;
 
+      const wsLambda = new aws.lambda.Function(`${name}-wsLambda`, {
+        ...lambdaConfig,
+        handler: wsHandler,
+      }, { parent: this });
+      this.wsLambda = wsLambda;
+
+      const eventLambda = new aws.lambda.Function(`${name}-evtLambda`, {
+        ...lambdaConfig,
+        handler: eventHandler,
+      }, { parent: this });
+      this.wsLambda = wsLambda;
+
       websocketApi = new WebsocketApi(`${name}-ws`, {
         ...omit(otherWebsocketProps, 'enabled'),
-        wsHandler,
-        eventHandler,
+        routes: {
+          $connect: {
+            eventHandler: wsLambda,
+          },
+          $disconnect: {
+            eventHandler: wsLambda,
+          },
+          $default: {
+            eventHandler: wsLambda,
+          },
+        },
       }, { parent: this });
+
+      this.websocketApi = websocketApi;
     }
 
     this.registerOutputs(omitBy({
       role,
       policy,
-      lambda,
+      httpLambda,
       concurrency,
       api,
       websocketApi,

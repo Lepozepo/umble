@@ -29,7 +29,7 @@ function identifyCredentials(pulumiCredentials) {
   return creds;
 }
 
-const AWS_PROPS = [
+const AWS_API_PROPS = [
   'Name',
   'ApiKeySelectionExpression',
   'CorsConfiguration',
@@ -42,7 +42,7 @@ const AWS_PROPS = [
   'Version',
 ];
 
-class WebsocketApiProvider extends pulumi.dynamic.Resource {
+class Api extends pulumi.dynamic.Resource {
   constructor(name, props = {}, ops) {
     super({
       async create(inputs) {
@@ -50,12 +50,18 @@ class WebsocketApiProvider extends pulumi.dynamic.Resource {
         const gateway = new AWS.ApiGatewayV2(creds);
 
         const api = await gateway.createApi({
-          ...pick(upperKeys(inputs), AWS_PROPS),
+          ...pick(upperKeys(inputs), AWS_API_PROPS),
           ProtocolType: 'WEBSOCKET',
           RouteSelectionExpression: '$request.body.action',
         }).promise();
 
-        return { id: api.ApiId, outs: camelKeys(api) };
+        return {
+          id: api.ApiId,
+          outs: {
+            ...inputs,
+            ...camelKeys(api),
+          },
+        };
       },
       async delete(id, inputs) {
         const creds = identifyCredentials(props._credentials);
@@ -70,12 +76,122 @@ class WebsocketApiProvider extends pulumi.dynamic.Resource {
         const gateway = new AWS.ApiGatewayV2(creds);
 
         const api = await gateway.updateApi({
-          ...pick(upperKeys(news), AWS_PROPS),
+          ...pick(upperKeys(news), AWS_API_PROPS),
           ApiId: id,
           RouteSelectionExpression: '$request.body.action',
         }).promise();
 
-        return { outs: camelKeys(api) };
+        return {
+          outs: {
+            ...news,
+            ...camelKeys(api),
+          },
+        };
+      },
+    }, name, props, ops);
+  }
+}
+
+class Integration extends pulumi.dynamic.Resource {
+  constructor(name, props = {}, ops) {
+    super({
+      async create(inputs) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        const integration = await gateway.createIntegration({
+          ApiId: inputs.apiId,
+          IntegrationType: 'AWS_PROXY',
+          IntegrationUri: inputs.integrationUri,
+        }).promise();
+
+        return {
+          id: integration.IntegrationId,
+          outs: {
+            ...inputs,
+            ...camelKeys(integration),
+          },
+        };
+
+      },
+      async delete(id, inputs) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        await gateway.deleteIntegration({
+          ApiId: inputs.apiId,
+          IntegrationId: id,
+        }).promise().catch(console.log);
+      },
+      async update(id, olds, news) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        const integration = await gateway.updateIntegration({
+          ApiId: olds.apiId,
+          IntegrationId: id,
+          IntegrationUri: news.eventHandler,
+        }).promise();
+
+        return {
+          outs: {
+            ...news,
+            ...camelKeys(integration),
+          },
+        };
+      },
+    }, name, props, ops);
+  }
+}
+
+class Route extends pulumi.dynamic.Resource {
+  constructor(name, props = {}, ops) {
+    super({
+      async create(inputs) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        const route = await gateway.createRoute({
+          AuthorizationType: 'NONE',
+          ApiId: inputs.apiId,
+          RouteKey: inputs.routeKey,
+          Target: `integrations/${inputs.integrationId}`,
+        }).promise();
+
+        return {
+          id: route.RouteId,
+          outs: {
+            ...inputs,
+            ...camelKeys(route),
+          },
+        };
+      },
+      async delete(id, inputs) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        await gateway.deleteRoute({
+          ApiId: inputs.apiId,
+          RouteId: id,
+        }).promise().catch(console.log);
+      },
+      async update(id, olds, news) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        const route = await gateway.updateRoute({
+          ApiId: olds.apiId,
+          RouteId: id,
+          RouteKey: news.routeKey,
+          Target: `integrations/${news.integrationId}`,
+        }).promise();
+
+        return {
+          outs: {
+            ...news,
+            ...camelKeys(route),
+          },
+        };
       },
     }, name, props, ops);
   }
@@ -92,6 +208,22 @@ export default class WebsocketApi extends pulumi.ComponentResource {
       region: aws.config.region,
     };
 
-    new WebsocketApiProvider(name, { name, ...props, _credentials }, { parent: this });
+    const api = new Api(name, { name, ...props, _credentials }, { parent: this });
+
+    if (props.routes) {
+      Object.entries(props.routes).map(async ([routeKey, routeProps]) => {
+        const integration = new Integration(`intg-${routeKey}`, {
+          apiId: api.id,
+          integrationUri: routeProps.eventHandler.invokeArn,
+          _credentials,
+        }, { parent: this });
+        const route = new Route(`route-${routeKey}`, {
+          apiId: api.id,
+          routeKey,
+          integrationId: integration.id,
+          _credentials,
+        }, { parent: this });
+      });
+    }
   }
 }
