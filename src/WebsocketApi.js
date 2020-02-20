@@ -69,11 +69,13 @@ class WebsocketApiProvider extends pulumi.dynamic.Resource {
         const creds = identifyCredentials(props._credentials);
         const gateway = new AWS.ApiGatewayV2(creds);
 
-        await gateway.updateApi({
+        const api = await gateway.updateApi({
           ...pick(upperKeys(news), AWS_PROPS),
           ApiId: id,
           RouteSelectionExpression: '$request.body.action',
-        }).promise().catch(console.log);
+        }).promise();
+
+        return { outs: camelKeys(api) };
       },
     }, name, props, ops);
   }
