@@ -210,8 +210,9 @@ export default class WebsocketApi extends pulumi.ComponentResource {
 
     const api = new Api(name, { name, ...props, _credentials }, { parent: this });
 
+    const routeConstructs = {};
     if (props.routes) {
-      Object.entries(props.routes).map(async ([routeKey, routeProps]) => {
+      Object.entries(props.routes).forEach(([routeKey, routeProps]) => {
         const integration = new Integration(`intg-${routeKey}`, {
           apiId: api.id,
           integrationUri: routeProps.eventHandler.invokeArn,
@@ -223,6 +224,9 @@ export default class WebsocketApi extends pulumi.ComponentResource {
           integrationId: integration.id,
           _credentials,
         }, { parent: this });
+
+        routeConstructs[`intg-${routeKey}`] = integration;
+        routeConstructs[`route-${routeKey}`] = route;
       });
     }
   }
