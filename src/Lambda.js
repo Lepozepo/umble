@@ -5,6 +5,7 @@ import random from '@pulumi/random';
 import {
   isNil,
   omitBy,
+  omit,
 } from 'lodash';
 import p from 'path';
 import cp from 'child_process';
@@ -18,7 +19,8 @@ export default class Lambda extends pulumi.ComponentResource {
 
     const {
       source,
-      handler = 'index.default',
+      httpHandler = 'index.http',
+      websockets = {},
       path = '/',
       timeout = 300,
       runtime = aws.lambda.NodeJS10dXRuntime,
@@ -30,7 +32,6 @@ export default class Lambda extends pulumi.ComponentResource {
       stageName = 'stage',
       allowedActions = [],
       buildCmd,
-      withWebsockets = false,
     } = props;
 
     const installer = fs.existsSync(`${source}/yarn.lock`) ? 'yarn' : 'npm';
@@ -97,7 +98,7 @@ export default class Lambda extends pulumi.ComponentResource {
     const lambda = new aws.lambda.Function(`${name}-lambda`, {
       runtime,
       timeout,
-      handler,
+      handler: httpHandler,
       environment,
       reservedConcurrentExecutions,
       memorySize,
@@ -137,8 +138,19 @@ export default class Lambda extends pulumi.ComponentResource {
     this.api = api;
 
     let websocketApi;
-    if (withWebsockets) {
-      websocketApi = new WebsocketApi(`${name}-ws`, { test: 3 }, { parent: this });
+
+    if (websockets?.enabled) {
+      const {
+        wsHandler = 'index.ws',
+        eventHandler = 'index.event',
+        ...otherWebsocketProps
+      } = websockets;
+
+      websocketApi = new WebsocketApi(`${name}-ws`, {
+        ...omit(otherWebsocketProps, 'enabled'),
+        wsHandler,
+        eventHandler,
+      }, { parent: this });
     }
 
     this.registerOutputs(omitBy({
