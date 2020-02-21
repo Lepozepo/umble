@@ -230,6 +230,7 @@ export default class WebsocketApi extends pulumi.ComponentResource {
       });
     }
 
+    // Left off here
     const connectionsTable = new aws.dynamodb.Table('connections-table', {
       name: 'Connections',
       attributes: [
