@@ -139,6 +139,8 @@ export default class Lambda extends pulumi.ComponentResource {
     this.api = api;
 
     let websocketApi;
+    let wsLambda;
+    let eventLambda;
 
     if (websockets?.enabled) {
       const {
@@ -147,17 +149,17 @@ export default class Lambda extends pulumi.ComponentResource {
         ...otherWebsocketProps
       } = websockets;
 
-      const wsLambda = new aws.lambda.Function(`${name}-wsLambda`, {
+      wsLambda = new aws.lambda.Function(`${name}-wsLambda`, {
         ...lambdaConfig,
         handler: wsHandler,
       }, { parent: this });
       this.wsLambda = wsLambda;
 
-      const eventLambda = new aws.lambda.Function(`${name}-evtLambda`, {
+      eventLambda = new aws.lambda.Function(`${name}-evtLambda`, {
         ...lambdaConfig,
         handler: eventHandler,
       }, { parent: this });
-      this.wsLambda = wsLambda;
+      this.eventLambda = eventLambda;
 
       websocketApi = new WebsocketApi(`${name}-ws`, {
         ...omit(otherWebsocketProps, 'enabled'),
@@ -173,7 +175,6 @@ export default class Lambda extends pulumi.ComponentResource {
           },
         },
       }, { parent: this });
-
       this.websocketApi = websocketApi;
     }
 
@@ -184,6 +185,8 @@ export default class Lambda extends pulumi.ComponentResource {
       concurrency,
       api,
       websocketApi,
+      wsLambda,
+      eventLambda,
     }, isNil));
   }
 }
