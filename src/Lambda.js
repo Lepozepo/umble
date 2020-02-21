@@ -11,6 +11,8 @@ import p from 'path';
 import cp from 'child_process';
 import readdirp from 'recursive-readdir-sync';
 import fs from 'fs';
+import uuid from 'uuid/v3';
+import sha256File from 'sha256-file';
 import WebsocketApi from './WebsocketApi';
 
 export default class Lambda extends pulumi.ComponentResource {
@@ -83,11 +85,14 @@ export default class Lambda extends pulumi.ComponentResource {
     this.layer = layer;
 
     const lambdaAssetMap = {};
+    const sourceCodeHashObj = {};
     readdirp(source).forEach((srcObject) => {
       if (srcObject.includes('node_modules')) return;
       lambdaAssetMap[p.relative(source, srcObject)] = new pulumi.asset.FileAsset(srcObject);
+      sourceCodeHashObj[p.relative(source, srcObject)] = sha256File(srcObject);
     });
 
+    const sourceCodeHash = uuid(JSON.stringify(sourceCodeHashObj), uuid.URL);
     const lambdaSrc = new aws.s3.BucketObject(`${name}-lambdaSrc`, {
       bucket: srcBucket.bucket,
       source: new pulumi.asset.AssetArchive(lambdaAssetMap),
@@ -105,6 +110,7 @@ export default class Lambda extends pulumi.ComponentResource {
       layers: [layer, ...layers],
       s3Bucket: srcBucket.bucket,
       s3Key: lambdaSrc.key,
+      sourceCodeHash,
       role: role.arn,
       publish: true, // Required for provisioned concurrency
     };
