@@ -229,5 +229,17 @@ export default class WebsocketApi extends pulumi.ComponentResource {
         routeConstructs[`route-${routeKey}`] = route;
       });
     }
+
+    const connectionsTable = new aws.dynamodb.Table('connections-table', {
+      name: 'Connections',
+      attributes: [
+        {
+          name: 'id',
+          type: 'S',
+        }
+      ],
+      billingMode: 'PAY_PER_REQUEST',
+      hashKey: 'id',
+    });
   }
 }
