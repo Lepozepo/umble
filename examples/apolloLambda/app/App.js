@@ -1,84 +1,70 @@
-const { ApolloServer, gql } = require('apollo-server-lambda');
+const {
+  DynamoDBConnectionManager,
+  DynamoDBEventProcessor,
+  DynamoDBEventStore,
+  DynamoDBSubscriptionManager,
+  PubSub,
+  Server,
+} = require('aws-lambda-graphql');
+const { gql } = require('apollo-server');
 
-// const pubsub = new PubSub();
-
-// const typeDefs = gql`
-//   type Book {
-//     title: String
-//     author: String
-//   }
-// 
-//   type Query {
-//     books: [Book]
-//   }
-// 
-//   type Subscription {
-//     bookAdded: Book
-//   }
-// 
-//   type Mutation {
-//     addBook(author: String, title: String): Book
-//   }
-// `;
+const eventStore = new DynamoDBEventStore({
+  eventsTable: process.env.EVENTS_TABLE,
+});
+const eventProcessor = new DynamoDBEventProcessor();
+const subscriptionManager = new DynamoDBSubscriptionManager({
+  subscriptionsTableName: process.env.SUBSCRIPTIONS_TABLE,
+  subscriptionOperationsTableName: process.env.OPERATIONS_TABLE,
+});
+const connectionManager = new DynamoDBConnectionManager({
+  subscriptionManager,
+  connectionsTable: process.env.CONNECTIONS_TABLE,
+});
+const pubSub = new PubSub({ eventStore });
 
 const typeDefs = gql`
-  type Book {
-    title: String
-    author: String
+  type Mutation {
+    broadcastMessage(message: String!): String!
   }
 
   type Query {
-    books: [Book]
+    dummy: String!
   }
 
-  type Mutation {
-    addBook(author: String, title: String): Book
+  type Subscription {
+    messageBroadcast: String!
   }
 `;
 
-const books = [
-  {
-    title: 'Harry Potter and the Chamber of Secrets',
-    author: 'J.K. Rowling',
-  },
-  {
-    title: 'Jurassic Park',
-    author: 'Michael Crichton',
-  },
-];
-
 const resolvers = {
-  // Subscription: {
-  //   bookAdded: {
-  //     subscribe: () => pubsub.asyncIterator(['BOOK_ADDED']),
-  //   },
-  // },
-  Query: {
-    books: () => books,
-  },
   Mutation: {
-    addBook(_, book) {
-      // pubsub.publish('BOOK_ADDED', { bookAdded: book });
-      books.push(book);
-      return book;
+    broadcastMessage: async (root, { message }) => {
+      await pubSub.publish('NEW_MESSAGE', { message });
+
+      return message;
+    },
+  },
+  Query: {
+    dummy: () => 'dummy',
+  },
+  Subscription: {
+    messageBroadcast: {
+      resolve: (rootValue) => rootValue.message,
+      subscribe: pubSub.subscribe('NEW_MESSAGE'),
     },
   },
 };
 
-const server = new ApolloServer({
+const server = new Server({
+  connectionManager,
+  eventProcessor,
+  subscriptionManager,
   typeDefs,
   resolvers,
   playgroud: true,
   introspection: true,
 });
 
-exports.handler = function handler(event, ctx, cb) {
-  const originalHandler = server.createHandler();
-
-  if (event.isBase64Encoded) {
-    // eslint-disable-next-line
-    event.body = Buffer.from(event.body, 'base64').toString();
-  }
-
-  return originalHandler(event, ctx, cb);
-};
+exports.ws = server.createWebSocketHandler();
+exports.http = server.createHttpHandler();
+exports.event = server.createEventHandler();
