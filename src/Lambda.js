@@ -34,6 +34,7 @@ export default class Lambda extends pulumi.ComponentResource {
       stageName = 'stage',
       allowedActions = [],
       buildCmd,
+      cors = false,
     } = props;
 
     const installer = fs.existsSync(`${source}/yarn.lock`) ? 'yarn' : 'npm';
@@ -144,6 +145,65 @@ export default class Lambda extends pulumi.ComponentResource {
     }, { parent: this });
     this.api = api;
 
+    let corsMethod;
+    let corsIntegration;
+    let corsMethodResponse;
+    let corsIntegrationResponse;
+
+    if (cors) {
+      corsMethod = new aws.apigateway.Method(`${name}-cors`, {
+        authorization: 'NONE',
+        httpMethod: 'OPTIONS',
+        restApi: api.restAPI.id,
+        resourceId: api.restAPI.rootResourceId,
+      }, { parent: this });
+      this.corsMethod = corsMethod;
+
+      corsIntegration = new aws.apigateway.Integration('integration', {
+        type: 'MOCK',
+        requestTemplates: {
+          'application/json': '{statusCode:200}',
+        },
+        contentHandling: 'CONVERT_TO_TEXT',
+        httpMethod: corsMethod.httpMethod,
+        resourceId: api.restAPI.rootResourceId,
+        restApi: api.restAPI.id,
+      }, { parent: this });
+      this.corsIntegration = corsIntegration;
+
+      corsMethodResponse = new aws.apigateway.MethodResponse('response200', {
+        httpMethod: corsMethod.httpMethod,
+        resourceId: api.restAPI.rootResourceId,
+        restApi: api.restAPI.id,
+        statusCode: '200',
+        responseParameters: {
+          'method.response.header.Access-Control-Allow-Origin': true,
+          'method.response.header.Access-Control-Allow-Headers': true,
+          'method.response.header.Access-Control-Allow-Methods': true,
+          'method.response.header.Access-Control-Allow-Credentials': true,
+        },
+        responseModels: {},
+      }, { parent: this });
+      this.corsMethodResponse = corsMethodResponse;
+
+      corsIntegrationResponse = new aws.apigateway.IntegrationResponse('integration-response', {
+        responseTemplates: {
+          'application/json': '#set($origin = $input.params("Origin"))\n#if($origin == "") #set($origin = $input.params("origin")) #end\n#if($origin.matches(".*")) #set($context.responseOverride.header.Access-Control-Allow-Origin = $origin) #end',
+        },
+        responseParameters: {
+          'method.response.header.Access-Control-Allow-Origin': '\'*\'',
+          'method.response.header.Access-Control-Allow-Headers': '\'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent\'',
+          'method.response.header.Access-Control-Allow-Methods': '\'OPTIONS,DELETE,GET,HEAD,PATCH,POST,PUT\'',
+          'method.response.header.Access-Control-Allow-Credentials': '\'false\'',
+        },
+        httpMethod: corsMethod.httpMethod,
+        resourceId: api.restAPI.rootResourceId,
+        restApi: api.restAPI.id,
+        statusCode: corsMethodResponse.statusCode,
+      }, { parent: this });
+      this.corsIntegrationResponse = corsIntegrationResponse;
+    }
+
     let websocketApi;
     let wsLambda;
     let eventLambda;
@@ -193,6 +253,10 @@ export default class Lambda extends pulumi.ComponentResource {
       websocketApi,
       wsLambda,
       eventLambda,
+      corsMethod,
+      corsIntegration,
+      corsMethodResponse,
+      corsIntegrationResponse,
     }, isNil));
   }
 }
