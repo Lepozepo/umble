@@ -133,12 +133,7 @@ export default class Lambda extends pulumi.ComponentResource {
       routes: [
         {
           path,
-          method: 'POST',
-          eventHandler: httpLambda,
-        },
-        {
-          path,
-          method: 'GET',
+          method: 'ANY',
           eventHandler: httpLambda,
         },
       ],
@@ -180,7 +175,7 @@ export default class Lambda extends pulumi.ComponentResource {
           'method.response.header.Access-Control-Allow-Origin': true,
           'method.response.header.Access-Control-Allow-Headers': true,
           'method.response.header.Access-Control-Allow-Methods': true,
-          'method.response.header.Access-Control-Allow-Credentials': true,
+          // 'method.response.header.Access-Control-Allow-Credentials': true,
         },
         responseModels: {},
       }, { parent: this });
@@ -194,7 +189,7 @@ export default class Lambda extends pulumi.ComponentResource {
           'method.response.header.Access-Control-Allow-Origin': '\'*\'',
           'method.response.header.Access-Control-Allow-Headers': '\'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent\'',
           'method.response.header.Access-Control-Allow-Methods': '\'OPTIONS,DELETE,GET,HEAD,PATCH,POST,PUT\'',
-          'method.response.header.Access-Control-Allow-Credentials': '\'false\'',
+          // 'method.response.header.Access-Control-Allow-Credentials': '\'false\'',
         },
         httpMethod: corsMethod.httpMethod,
         resourceId: api.restAPI.rootResourceId,
