@@ -5,7 +5,7 @@ import mime from 'mime';
 import cp from 'child_process';
 import path from 'path';
 import isEmpty from 'lodash/isEmpty';
-import sha256File from 'sha256-file';
+import md5File from 'md5-file';
 
 export default class StaticWebApp extends pulumi.ComponentResource {
   constructor(name, props = {}, ops) {
@@ -123,7 +123,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
             source: new pulumi.asset.FileAsset(dir),
             key: path.relative(buildDir, dir),
             contentType: mime.getType(dir) || undefined,
-            etag: sha256File(dir),
+            etag: md5File.sync(dir),
           }, { parent: this });
         }
         /* eslint-enable */
@@ -136,7 +136,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
           source: new pulumi.asset.FileAsset(dir),
           key: path.relative(buildDir, dir),
           contentType: mime.getType(dir) || undefined,
-          etag: sha256File(dir),
+          etag: md5File.sync(dir),
         }, { parent: this });
       }
       /* eslint-enable */

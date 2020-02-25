@@ -12,7 +12,7 @@ import cp from 'child_process';
 import readdirp from 'recursive-readdir-sync';
 import fs from 'fs';
 import uuid from 'uuid/v3';
-import sha256File from 'sha256-file';
+import md5File from 'md5-file';
 import WebsocketApi from './WebsocketApi';
 
 export default class Lambda extends pulumi.ComponentResource {
@@ -90,7 +90,7 @@ export default class Lambda extends pulumi.ComponentResource {
     readdirp(source).forEach((srcObject) => {
       if (srcObject.includes('node_modules')) return;
       lambdaAssetMap[p.relative(source, srcObject)] = new pulumi.asset.FileAsset(srcObject);
-      sourceCodeHashObj[p.relative(source, srcObject)] = sha256File(srcObject);
+      sourceCodeHashObj[p.relative(source, srcObject)] = md5File.sync(srcObject);
     });
 
     const sourceCodeHash = uuid(JSON.stringify(sourceCodeHashObj), uuid.URL);

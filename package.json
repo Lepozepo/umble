@@ -38,9 +38,9 @@
     "@pulumi/tls": "^1.4.0",
     "aws-sdk": "^2.618.0",
     "lodash": "^4.17.15",
+    "md5-file": "^4.0.0",
     "mime": "^2.4.4",
     "recursive-readdir-sync": "^1.0.6",
-    "sha256-file": "^1.0.0",
     "uuid": "^3.4.0"
   },
   "devDependencies": {
