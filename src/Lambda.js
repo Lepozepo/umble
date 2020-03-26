@@ -105,7 +105,9 @@ export default class Lambda extends pulumi.ComponentResource {
       runtime,
       timeout,
       handler,
-      environment,
+      environment: {
+        variables: environment,
+      },
       reservedConcurrentExecutions,
       memorySize,
       layers: [layer, ...layers],
