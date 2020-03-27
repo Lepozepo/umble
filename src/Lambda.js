@@ -82,6 +82,7 @@ export default class Lambda extends pulumi.ComponentResource {
       s3Bucket: srcBucket.bucket,
       s3Key: layerSrc.key,
       layerName: pulumi.interpolate`${name}-${layerId.hex}-layer`,
+      sourceCodeHash: md5File.sync(`${source}/${installer === 'yarn' ? 'yarn.lock' : 'package-lock.json'}`),
     }, { parent: this });
     this.layer = layer;
 
