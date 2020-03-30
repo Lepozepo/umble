@@ -9,14 +9,14 @@ const { getMainDefinition } = require('apollo-utilities');
 const ws = require('ws');
 
 const httpLink = createHttpLink({
-  uri: 'http://localhost:4000',
+  uri: 'https://8sjat04a32.execute-api.us-east-2.amazonaws.com/stage/',
   fetch,
 });
 
-const wsClient = new SubscriptionClient('ws://localhost:4000/graphql', {
+const wsClient = new SubscriptionClient('wss://esu3sww8l2.execute-api.us-east-2.amazonaws.com/c', {
   reconnect: true,
   lazy: true,
-}, ws);
+}, ws, []);
 
 const wsLink = new WebSocketLink(wsClient);
 

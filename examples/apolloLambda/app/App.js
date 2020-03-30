@@ -17,7 +17,7 @@ const subscriptionManager = new DynamoDBSubscriptionManager({
   subscriptionOperationsTableName: process.env.OPERATIONS_TABLE,
 });
 const connectionManager = new DynamoDBConnectionManager({
-  subscriptionManager,
+  subscriptions: subscriptionManager,
   connectionsTable: process.env.CONNECTIONS_TABLE,
 });
 const pubSub = new PubSub({ eventStore });
@@ -61,10 +61,28 @@ const server = new Server({
   subscriptionManager,
   typeDefs,
   resolvers,
-  playgroud: true,
+  playground: {
+    subscriptionEndpoint: 'wss://esu3sww8l2.execute-api.us-east-2.amazonaws.com/c',
+  },
   introspection: true,
 });
 
 exports.ws = server.createWebSocketHandler();
-exports.http = server.createHttpHandler();
+
+// NOTE: What I need to do next is deploy and test it out
+// JSON.parse was failing in the handler, probably because
+// of the Buffer stuff so I'm trying to rewire it the same way I'd have to
+// for any other lambda
+exports.http = function http(event, ctx, cb) {
+  const originalHandler = server.createHttpHandler();
+
+  if (event.isBase64Encoded) {
+    // eslint-disable-next-line
+    event.body = Buffer.from(event.body, 'base64').toString();
+  }
+
+  return originalHandler(event, ctx, cb);
+};
+
+
 exports.event = server.createEventHandler();
