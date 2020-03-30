@@ -197,6 +197,56 @@ class Route extends pulumi.dynamic.Resource {
   }
 }
 
+class Stage extends pulumi.dynamic.Resource {
+  constructor(name, props = {}, ops) {
+    super({
+      async create(inputs) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        const stage = await gateway.createStage({
+          ApiId: inputs.apiId,
+          StageName: inputs.name,
+          AutoDeploy: true,
+        }).promise();
+
+        return {
+          id: stage.StageName,
+          outs: {
+            ...inputs,
+            ...camelKeys(stage),
+          },
+        };
+      },
+      async delete(id, inputs) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        await gateway.deleteStage({
+          ApiId: inputs.apiId,
+          StageName: id,
+        }).promise().catch(console.log);
+      },
+      async update(id, olds, news) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        const stage = await gateway.updateStage({
+          ApiId: olds.apiId,
+          StageName: id,
+        }).promise();
+
+        return {
+          outs: {
+            ...news,
+            ...camelKeys(stage),
+          },
+        };
+      },
+    }, name, props, ops);
+  }
+}
+
 export default class WebsocketApi extends pulumi.ComponentResource {
   constructor(name, props = {}, ops) {
     super('umble:websocket:WebsocketApi', name, props, ops);
@@ -230,17 +280,12 @@ export default class WebsocketApi extends pulumi.ComponentResource {
       });
     }
 
-    // Left off here
-    const connectionsTable = new aws.dynamodb.Table('connections-table', {
-      name: 'Connections',
-      attributes: [
-        {
-          name: 'id',
-          type: 'S',
-        }
-      ],
-      billingMode: 'PAY_PER_REQUEST',
-      hashKey: 'id',
+    const stage = new Stage(`${name}-stage`, { name: props.stageName || 'c', apiId: api.id, _credentials }, { parent: this });
+
+    this.url = pulumi.interpolate`wss://${api.apiEndpoint}/${stage.stageName}`;
+
+    this.registerOutputs({
+      url: this.url,
     });
   }
 }

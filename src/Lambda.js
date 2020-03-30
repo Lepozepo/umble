@@ -50,7 +50,7 @@ export default class Lambda extends pulumi.ComponentResource {
       policy: pulumi.output({
         Version: '2012-10-17',
         Statement: [{
-          Action: ['logs:*', 'cloudwatch:*', 's3:*', ...allowedActions],
+          Action: ['logs:*', 'cloudwatch:*', 's3:*', 'dynamodb:*', 'execute-api:*', ...allowedActions],
           Resource: '*',
           Effect: 'Allow',
         }],
@@ -118,7 +118,7 @@ export default class Lambda extends pulumi.ComponentResource {
       role: role.arn,
       publish: true, // Required for provisioned concurrency
     };
-    const httpLambda = new aws.lambda.Function(`${name}-httpLambda`, lambdaConfig, { parent: this });
+    const httpLambda = new aws.lambda.Function(`${name}-http`, lambdaConfig, { parent: this });
     this.httpLambda = httpLambda;
 
     let concurrency;
@@ -213,13 +213,15 @@ export default class Lambda extends pulumi.ComponentResource {
         ...otherWebsocketProps
       } = websockets;
 
-      wsLambda = new aws.lambda.Function(`${name}-wsLambda`, {
+      // This will set up the connection tracker
+      wsLambda = new aws.lambda.Function(`${name}-ws`, {
         ...lambdaConfig,
         handler: wsHandler,
       }, { parent: this });
       this.wsLambda = wsLambda;
 
-      eventLambda = new aws.lambda.Function(`${name}-evtLambda`, {
+      // This will trigger the stream
+      eventLambda = new aws.lambda.Function(`${name}-evt`, {
         ...lambdaConfig,
         handler: eventHandler,
       }, { parent: this });
@@ -240,6 +242,12 @@ export default class Lambda extends pulumi.ComponentResource {
         },
       }, { parent: this });
       this.websocketApi = websocketApi;
+
+      this.allowApiGateway = new aws.lambda.Permission('allowApiGateway', {
+        action: 'lambda:InvokeFunction',
+        function: wsLambda.name,
+        principal: 'apigateway.amazonaws.com',
+      }, { parent: this, dependsOn: [wsLambda, websocketApi] });
     }
 
     this.registerOutputs(omitBy({
