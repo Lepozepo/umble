@@ -1,11 +1,11 @@
 {
-  "name": "umble",
-  "version": "1.2.5",
-  "description": "Humble Pulumi Constructs for Apollo/React Developers",
+  "name": "umble-apollo-server",
+  "version": "0.0.1",
+  "description": "React Apollo Server with Subscription support on Umble",
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lepozepo/umble"
+    "url": "https://github.com/lepozepo/umble/server"
   },
   "scripts": {
     "pack:build": "pika build",
@@ -31,20 +31,11 @@
     ]
   },
   "dependencies": {
-    "@pulumi/aws": "^1.16.0",
-    "@pulumi/awsx": "^0.18.14",
-    "@pulumi/pulumi": "^1.8.1",
-    "@pulumi/random": "^1.5.0",
-    "@pulumi/tls": "^1.4.0",
     "aws-lambda-graphql": "^1.0.0-alpha.4",
     "aws-sdk": "^2.618.0",
     "graphql": "^14.6.0",
     "graphql-subscriptions": "^1.1.0",
-    "lodash": "^4.17.15",
-    "md5-file": "^4.0.0",
-    "mime": "^2.4.4",
-    "recursive-readdir-sync": "^1.0.6",
-    "uuid": "^3.4.0"
+    "lodash": "^4.17.15"
   },
   "devDependencies": {
     "@babel/core": "^7.8.4",
