@@ -5,8 +5,7 @@ import {
   Server,
 } from 'aws-lambda-graphql';
 
-// NOTE: Server extends apollo-server-lambda
-export default class ApolloServer extends Server {
+export default class ApolloServer {
   constructor(props = {}) {
     const {
       connectionManager,
@@ -15,42 +14,42 @@ export default class ApolloServer extends Server {
       onError,
       subscriptionManager,
       subscriptions,
-      ...restConfig
+      ...otherProps
     } = props;
 
-    const _eventProcessor = eventProcessor || new DynamoDBEventProcessor();
-    const _subscriptionManager = subscriptionManager || new DynamoDBSubscriptionManager({
+    this.eventProcessor = eventProcessor || new DynamoDBEventProcessor();
+    this.subscriptionManager = subscriptionManager || new DynamoDBSubscriptionManager({
       subscriptionsTableName: process.env.UMBLE_SUBSCRIPTIONS_TABLE,
       subscriptionOperationsTableName: process.env.UMBLE_OPERATIONS_TABLE,
     });
-    const _connectionManager = connectionManager || new DynamoDBConnectionManager({
-      subscriptions: _subscriptionManager,
+    this.connectionManager = connectionManager || new DynamoDBConnectionManager({
+      subscriptions: this.subscriptionManager,
       connectionsTable: process.env.UMBLE_CONNECTIONS_TABLE,
     });
 
-    super({
-      connectionManager: _connectionManager,
+    this.server = new Server({
+      connectionManager: this.connectionManager,
       context,
-      eventProcessor: _eventProcessor,
+      eventProcessor: this.eventProcessor,
       onError,
-      subscriptionManager: _subscriptionManager,
+      subscriptionManager: this.subscriptionManager,
       subscriptions,
-      ...restConfig,
+      ...otherProps,
     });
+
+    this.handlers = {
+      ws: this.server.createWebSocketHandler,
+      event: this.server.createEventHandler,
+      http: (options) => (event, ctx, cb) => {
+        const handler = this.server.createHttpHandler(options);
+
+        if (event.isBase64Encoded) {
+          // eslint-disable-next-line
+          event.body = Buffer.from(event.body, 'base64').toString();
+        }
+
+        return handler(event, ctx, cb);
+      },
+    };
   }
-
-  handlers = {
-    ws: super.createWebSocketHandler,
-    event: super.createEventHandler,
-    http: (options) => (event, ctx, cb) => {
-      const handler = super.createHttpHandler(options);
-
-      if (event.isBase64Encoded) {
-        // eslint-disable-next-line
-        event.body = Buffer.from(event.body, 'base64').toString();
-      }
-
-      return handler(event, ctx, cb);
-    },
-  };
 }
