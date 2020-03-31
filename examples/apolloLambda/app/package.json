@@ -8,6 +8,6 @@
     "apollo-server-lambda": "^2.10.0",
     "aws-lambda-graphql": "^1.0.0-alpha.4",
     "graphql": "^14.6.0",
-    "umble-apollo-server": "0.0.5"
+    "umble-apollo-server": "0.0.6"
   }
 }

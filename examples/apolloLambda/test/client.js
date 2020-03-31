@@ -16,7 +16,7 @@ const httpLink = createHttpLink({
 const wsClient = new SubscriptionClient('wss://upshkmr81a.execute-api.us-east-2.amazonaws.com/stage', {
   reconnect: true,
   lazy: true,
-}, ws, []);
+}, ws, []); // The empty array is very important for this to work with AWS!
 
 const wsLink = new WebSocketLink(wsClient);
 
