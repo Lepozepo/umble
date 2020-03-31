@@ -62,10 +62,10 @@ export default class Lambda extends pulumi.ComponentResource {
       forceDestroy: true,
     }, { parent: this });
 
-    const layerId = new random.RandomId(`${name}-layerId`, {
+    const internalId = new random.RandomId(`${name}-internalId`, {
       byteLength: 3,
     }, { parent: this });
-    this.layerId = layerId;
+    this.internalId = internalId;
 
     const layerSrc = new aws.s3.BucketObject(`${name}-layerSrc`, {
       bucket: srcBucket.bucket,
@@ -81,7 +81,7 @@ export default class Lambda extends pulumi.ComponentResource {
       compatibleRuntimes: [runtime],
       s3Bucket: srcBucket.bucket,
       s3Key: layerSrc.key,
-      layerName: pulumi.interpolate`${name}-${layerId.hex}-layer`,
+      layerName: pulumi.interpolate`${name}-${internalId.hex}-layer`,
       sourceCodeHash: md5File.sync(`${source}/${installer === 'yarn' ? 'yarn.lock' : 'package-lock.json'}`),
     }, { parent: this });
     this.layer = layer;
@@ -102,12 +102,77 @@ export default class Lambda extends pulumi.ComponentResource {
     }, { parent: this });
     this.lambdaSrc = lambdaSrc;
 
+    if (websockets?.enabled) {
+      this.connectionsTable = new aws.dynamodb.Table('umble-connections', {
+        name: pulumi.interpolate`Connections-${internalId.hex}`,
+        attributes: [
+          {
+            name: 'id',
+            type: 'S',
+          },
+        ],
+        billingMode: 'PAY_PER_REQUEST',
+        hashKey: 'id',
+      });
+
+      this.subscriptionsTable = new aws.dynamodb.Table('umble-subscriptions', {
+        name: pulumi.interpolate`Subscriptions-${internalId.hex}`,
+        attributes: [
+          {
+            name: 'event',
+            type: 'S',
+          },
+          {
+            name: 'subscriptionId',
+            type: 'S',
+          },
+        ],
+        billingMode: 'PAY_PER_REQUEST',
+        hashKey: 'event',
+        rangeKey: 'subscriptionId',
+      });
+
+      this.operationsTable = new aws.dynamodb.Table('umble-operations', {
+        name: pulumi.interpolate`SubscriptionOperations-${internalId.hex}`,
+        attributes: [
+          {
+            name: 'subscriptionId',
+            type: 'S',
+          },
+        ],
+        billingMode: 'PAY_PER_REQUEST',
+        hashKey: 'subscriptionId',
+      });
+
+      this.eventsTable = new aws.dynamodb.Table('umble-events', {
+        name: pulumi.interpolate`Events-${internalId.hex}`,
+        attributes: [
+          {
+            name: 'id',
+            type: 'S',
+          },
+        ],
+        billingMode: 'PAY_PER_REQUEST',
+        hashKey: 'id',
+        streamEnabled: true,
+        streamViewType: 'NEW_IMAGE',
+      });
+    }
+
     const lambdaConfig = {
       runtime,
       timeout,
       handler,
       environment: {
-        variables: environment,
+        variables: {
+          ...environment,
+          ...(websockets?.enabled ? ({
+            UMBLE_SUBSCRIPTIONS_TABLE: this.subscriptionsTable.name,
+            UMBLE_OPERATIONS_TABLE: this.operationsTable.name,
+            UMBLE_CONNECTIONS_TABLE: this.connectionsTable.name,
+            UMBLE_EVENTS_TABLE: this.eventsTable.name,
+          }) : ({})),
+        },
       },
       reservedConcurrentExecutions,
       memorySize,
@@ -143,34 +208,27 @@ export default class Lambda extends pulumi.ComponentResource {
     }, { parent: this });
     this.api = api;
 
-    let corsMethod;
-    let corsIntegration;
-    let corsMethodResponse;
-    let corsIntegrationResponse;
-
     if (cors) {
-      corsMethod = new aws.apigateway.Method(`${name}-cors`, {
+      this.corsMethod = new aws.apigateway.Method(`${name}-cors`, {
         authorization: 'NONE',
         httpMethod: 'OPTIONS',
         restApi: api.restAPI.id,
         resourceId: api.restAPI.rootResourceId,
       }, { parent: this });
-      this.corsMethod = corsMethod;
 
-      corsIntegration = new aws.apigateway.Integration('integration', {
+      this.corsIntegration = new aws.apigateway.Integration('integration', {
         type: 'MOCK',
         requestTemplates: {
           'application/json': '{statusCode:200}',
         },
         contentHandling: 'CONVERT_TO_TEXT',
-        httpMethod: corsMethod.httpMethod,
+        httpMethod: this.corsMethod.httpMethod,
         resourceId: api.restAPI.rootResourceId,
         restApi: api.restAPI.id,
       }, { parent: this });
-      this.corsIntegration = corsIntegration;
 
-      corsMethodResponse = new aws.apigateway.MethodResponse('response200', {
-        httpMethod: corsMethod.httpMethod,
+      this.corsMethodResponse = new aws.apigateway.MethodResponse('response200', {
+        httpMethod: this.corsMethod.httpMethod,
         resourceId: api.restAPI.rootResourceId,
         restApi: api.restAPI.id,
         statusCode: '200',
@@ -182,9 +240,8 @@ export default class Lambda extends pulumi.ComponentResource {
         },
         responseModels: {},
       }, { parent: this });
-      this.corsMethodResponse = corsMethodResponse;
 
-      corsIntegrationResponse = new aws.apigateway.IntegrationResponse('integration-response', {
+      this.corsIntegrationResponse = new aws.apigateway.IntegrationResponse('integration-response', {
         responseTemplates: {
           'application/json': '#set($origin = $input.params("Origin"))\n#if($origin == "") #set($origin = $input.params("origin")) #end\n#if($origin.matches(".*")) #set($context.responseOverride.header.Access-Control-Allow-Origin = $origin) #end',
         },
@@ -194,17 +251,12 @@ export default class Lambda extends pulumi.ComponentResource {
           'method.response.header.Access-Control-Allow-Methods': '\'OPTIONS,DELETE,GET,HEAD,PATCH,POST,PUT\'',
           // 'method.response.header.Access-Control-Allow-Credentials': '\'false\'',
         },
-        httpMethod: corsMethod.httpMethod,
+        httpMethod: this.corsMethod.httpMethod,
         resourceId: api.restAPI.rootResourceId,
         restApi: api.restAPI.id,
-        statusCode: corsMethodResponse.statusCode,
+        statusCode: this.corsMethodResponse.statusCode,
       }, { parent: this });
-      this.corsIntegrationResponse = corsIntegrationResponse;
     }
-
-    let websocketApi;
-    let wsLambda;
-    let eventLambda;
 
     if (websockets?.enabled) {
       const {
@@ -214,40 +266,42 @@ export default class Lambda extends pulumi.ComponentResource {
       } = websockets;
 
       // This will set up the connection tracker
-      wsLambda = new aws.lambda.Function(`${name}-ws`, {
+      this.wsLambda = new aws.lambda.Function(`${name}-ws`, {
         ...lambdaConfig,
         handler: wsHandler,
       }, { parent: this });
-      this.wsLambda = wsLambda;
 
-      // This will trigger the stream
-      eventLambda = new aws.lambda.Function(`${name}-evt`, {
-        ...lambdaConfig,
-        handler: eventHandler,
-      }, { parent: this });
-      this.eventLambda = eventLambda;
-
-      websocketApi = new WebsocketApi(`${name}-ws`, {
+      this.websocketApi = new WebsocketApi(`${name}-ws`, {
         ...omit(otherWebsocketProps, 'enabled'),
         routes: {
           $connect: {
-            eventHandler: wsLambda,
+            eventHandler: this.wsLambda,
           },
           $disconnect: {
-            eventHandler: wsLambda,
+            eventHandler: this.wsLambda,
           },
           $default: {
-            eventHandler: wsLambda,
+            eventHandler: this.wsLambda,
           },
         },
       }, { parent: this });
-      this.websocketApi = websocketApi;
 
       this.allowApiGateway = new aws.lambda.Permission('allowApiGateway', {
         action: 'lambda:InvokeFunction',
-        function: wsLambda.name,
+        function: this.wsLambda.name,
         principal: 'apigateway.amazonaws.com',
-      }, { parent: this, dependsOn: [wsLambda, websocketApi] });
+      }, { parent: this, dependsOn: [this.wsLambda, this.websocketApi] });
+
+      // This will trigger the stream
+      this.eventLambda = new aws.lambda.Function(`${name}-evt`, {
+        ...lambdaConfig,
+        handler: eventHandler,
+      }, { parent: this });
+
+      this.eventsTable.onEvent('umble-event-handler', this.eventLambda, {
+        batchSize: 100,
+        startingPosition: 'LATEST',
+      });
     }
 
     this.registerOutputs(omitBy({
@@ -256,13 +310,13 @@ export default class Lambda extends pulumi.ComponentResource {
       httpLambda,
       concurrency,
       api,
-      websocketApi,
-      wsLambda,
-      eventLambda,
-      corsMethod,
-      corsIntegration,
-      corsMethodResponse,
-      corsIntegrationResponse,
+      corsMethod: this.corsMethod,
+      corsIntegration: this.corsIntegration,
+      corsMethodResponse: this.corsMethodResponse,
+      corsIntegrationResponse: this.corsIntegrationResponse,
+      websocketApi: this.websocketApi,
+      wsLambda: this.wsLambda,
+      eventLambda: this.eventLambda,
     }, isNil));
   }
 }
