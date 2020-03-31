@@ -38,8 +38,8 @@ export default class ApolloServer {
     });
 
     this.handlers = {
-      ws: this.server.createWebSocketHandler,
-      event: this.server.createEventHandler,
+      ws: () => this.server.createWebSocketHandler(),
+      event: () => this.server.createEventHandler(),
       http: (options) => (event, ctx, cb) => {
         const handler = this.server.createHttpHandler(options);
 
