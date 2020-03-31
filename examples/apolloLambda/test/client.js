@@ -9,11 +9,11 @@ const { getMainDefinition } = require('apollo-utilities');
 const ws = require('ws');
 
 const httpLink = createHttpLink({
-  uri: 'https://8sjat04a32.execute-api.us-east-2.amazonaws.com/stage/',
+  uri: 'https://7h59ik0sjh.execute-api.us-east-2.amazonaws.com/stage/',
   fetch,
 });
 
-const wsClient = new SubscriptionClient('wss://esu3sww8l2.execute-api.us-east-2.amazonaws.com/c', {
+const wsClient = new SubscriptionClient('wss://upshkmr81a.execute-api.us-east-2.amazonaws.com/stage', {
   reconnect: true,
   lazy: true,
 }, ws, []);
