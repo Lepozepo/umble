@@ -87,7 +87,7 @@
 // 
 // exports.event = server.createEventHandler();
 
-const { ApolloServer, PubSub } = require('umble');
+const { ApolloServer, PubSub } = require('umble-apollo-server');
 const { gql } = require('apollo-server');
 
 const pubSub = new PubSub();

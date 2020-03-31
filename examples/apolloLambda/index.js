@@ -3,7 +3,6 @@ const { Lambda } = require('../../constructs/pkg/dist-node');
 const apollo = new Lambda('umble', {
   source: './app',
   handler: 'App.http',
-  buildCmd: 'echo \'build\'',
   // cors: true,
   websockets: {
     enabled: true,

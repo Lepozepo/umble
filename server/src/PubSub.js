@@ -5,9 +5,10 @@ import {
 
 export default class PubSub extends ALGPubSub {
   constructor({ eventStore } = {}) {
-    super({ eventStore });
-    this.eventStore = eventStore || new DynamoDBEventStore({
-      eventsTable: process.env.UMBLE_EVENTS_TABLE,
+    super({
+      eventStore: eventStore || new DynamoDBEventStore({
+        eventsTable: process.env.UMBLE_EVENTS_TABLE,
+      }),
     });
   }
 }
