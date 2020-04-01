@@ -7,6 +7,6 @@
     "start": "NODE_ENV='development' umble -e ./App.js -f dev"
   },
   "dependencies": {
-    "umble-apollo-server": "0.0.6"
+    "umble-apollo-server": "0.0.7"
   }
 }
