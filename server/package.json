@@ -1,6 +1,6 @@
 {
   "name": "umble-apollo-server",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "React Apollo Server with Subscription support on Umble",
   "main": "index.js",
   "repository": {
@@ -30,7 +30,9 @@
       ],
       [
         "@pika/plugin-simple-bin",
-        { "bin": "umble" }
+        {
+          "bin": "umble"
+        }
       ]
     ]
   },
