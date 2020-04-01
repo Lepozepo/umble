@@ -4,6 +4,9 @@ import {
   DynamoDBSubscriptionManager,
   Server,
 } from 'aws-lambda-graphql';
+import {
+  ApolloServer as ExpressServer,
+} from 'apollo-server';
 
 export default class ApolloServer {
   constructor(props = {}) {
@@ -49,6 +52,13 @@ export default class ApolloServer {
         }
 
         return handler(event, ctx, cb);
+      },
+    };
+
+    this.services = {
+      run: (fn) => () => {
+        const server = new ExpressServer(props);
+        server.listen().then(fn);
       },
     };
   }
