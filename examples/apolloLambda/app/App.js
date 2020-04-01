@@ -1,28 +1,8 @@
-const {
-  DynamoDBConnectionManager,
-  DynamoDBEventProcessor,
-  DynamoDBEventStore,
-  DynamoDBSubscriptionManager,
-  PubSub,
-  Server,
-} = require('aws-lambda-graphql');
-const { gql } = require('apollo-server');
+const { ApolloServer, PubSub } = require('umble-apollo-server');
 
-const eventStore = new DynamoDBEventStore({
-  eventsTable: process.env.EVENTS_TABLE,
-});
-const eventProcessor = new DynamoDBEventProcessor();
-const subscriptionManager = new DynamoDBSubscriptionManager({
-  subscriptionsTableName: process.env.SUBSCRIPTIONS_TABLE,
-  subscriptionOperationsTableName: process.env.OPERATIONS_TABLE,
-});
-const connectionManager = new DynamoDBConnectionManager({
-  subscriptionManager,
-  connectionsTable: process.env.CONNECTIONS_TABLE,
-});
-const pubSub = new PubSub({ eventStore });
+const pubSub = new PubSub({ dev: process.env.NODE_ENV === 'development' });
 
-const typeDefs = gql`
+const typeDefs = `
   type Mutation {
     broadcastMessage(message: String!): String!
   }
@@ -55,16 +35,18 @@ const resolvers = {
   },
 };
 
-const server = new Server({
-  connectionManager,
-  eventProcessor,
-  subscriptionManager,
+const server = new ApolloServer({
   typeDefs,
   resolvers,
-  playgroud: true,
+  playground: true,
   introspection: true,
 });
 
-exports.ws = server.createWebSocketHandler();
-exports.http = server.createHttpHandler();
-exports.event = server.createEventHandler();
+exports.ws = server.handlers.ws();
+exports.http = server.handlers.http();
+exports.event = server.handlers.event();
+
+exports.dev = server.services.run(({ url, subscriptionsUrl }) => {
+  console.log(`Server ready at ${url}`);
+  console.log(`Subscriptions ready at ${subscriptionsUrl}`);
+});

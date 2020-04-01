@@ -1,0 +1,21 @@
+{
+  "name": "apolloLambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "@pulumi/aws": "^1.22.0",
+    "@pulumi/awsx": "^0.19.2",
+    "@pulumi/pulumi": "^1.11.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

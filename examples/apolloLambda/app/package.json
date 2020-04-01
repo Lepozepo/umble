@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "start": "NODE_ENV='development' umble -e ./App.js -f dev"
+  },
   "dependencies": {
-    "apollo-server": "^2.10.0",
-    "apollo-server-lambda": "^2.10.0",
-    "aws-lambda-graphql": "^1.0.0-alpha.4",
-    "graphql": "^14.6.0"
+    "umble-apollo-server": "0.0.7"
   }
 }

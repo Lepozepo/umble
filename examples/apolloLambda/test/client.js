@@ -9,14 +9,14 @@ const { getMainDefinition } = require('apollo-utilities');
 const ws = require('ws');
 
 const httpLink = createHttpLink({
-  uri: 'http://localhost:4000',
+  uri: 'https://7h59ik0sjh.execute-api.us-east-2.amazonaws.com/stage/',
   fetch,
 });
 
-const wsClient = new SubscriptionClient('ws://localhost:4000/graphql', {
+const wsClient = new SubscriptionClient('wss://upshkmr81a.execute-api.us-east-2.amazonaws.com/stage', {
   reconnect: true,
   lazy: true,
-}, ws);
+}, ws, []); // The empty array is very important for this to work with AWS!
 
 const wsLink = new WebSocketLink(wsClient);
 

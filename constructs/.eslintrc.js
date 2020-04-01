@@ -9,6 +9,7 @@ module.exports = {
   rules: {
     'no-underscore-dangle': 0,
     'import/no-named-as-default': 0,
+    'max-classes-per-file': 0,
   },
   parser: 'babel-eslint',
   env: {

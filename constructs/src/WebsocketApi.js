@@ -1,17 +1,9 @@
-/* eslint-disable */
-
 import pulumi from '@pulumi/pulumi';
 import aws from '@pulumi/aws';
-import awsx from '@pulumi/awsx';
-import random from '@pulumi/random';
 import {
-  isNil,
   pick,
 } from 'lodash';
-import p from 'path';
-import cp from 'child_process';
 import AWS from 'aws-sdk';
-import uuid from 'uuid/v4';
 import camelKeys from './camelKeys';
 import upperKeys from './upperKeys';
 
@@ -42,6 +34,90 @@ const AWS_API_PROPS = [
   'Version',
 ];
 
+function serviceOutputs(service) {
+  if (!service) return {};
+  switch (service) {
+    case 'api': {
+      return {
+        apiEndpoint: undefined,
+        apiId: undefined,
+        apiKeySelectionExpression: undefined,
+        corsConfiguration: undefined,
+        createdDate: undefined,
+        description: undefined,
+        disableSchemaValidation: undefined,
+        importInfo: undefined,
+        name: undefined,
+        protocolType: undefined,
+        routeSelectionExpression: undefined,
+        tags: undefined,
+        version: undefined,
+        warnings: undefined,
+      };
+    }
+    case 'stage': {
+      return {
+        accessLogSettings: undefined,
+        apiGatewayManaged: undefined,
+        autoDeploy: undefined,
+        clientCertificateId: undefined,
+        createdDate: undefined,
+        defaultRouteSettings: undefined,
+        deploymentId: undefined,
+        description: undefined,
+        lastDeploymentStatusMessage: undefined,
+        lastUpdatedDate: undefined,
+        routeSettings: undefined,
+        stageName: undefined,
+        stageVariables: undefined,
+        tags: undefined,
+      };
+    }
+    case 'route': {
+      return {
+        apiGatewayManaged: undefined,
+        apiKeyRequired: undefined,
+        authorizationScopes: undefined,
+        authorizationType: undefined,
+        authorizerId: undefined,
+        modelSelectionExpression: undefined,
+        operationName: undefined,
+        requestModels: undefined,
+        requestParameters: undefined,
+        routeId: undefined,
+        routeKey: undefined,
+        routeResponseSelectionExpression: undefined,
+        target: undefined,
+      };
+    }
+    case 'integration': {
+      return {
+        apiGatewayManaged: undefined,
+        connectionId: undefined,
+        connectionType: undefined,
+        contentHandlingStrategy: undefined,
+        credentialsArn: undefined,
+        description: undefined,
+        integrationId: undefined,
+        integrationMethod: undefined,
+        integrationResponseSelectionExpression: undefined,
+        integrationType: undefined,
+        integrationUri: undefined,
+        passthroughBehavior: undefined,
+        payloadFormatVersion: undefined,
+        requestParameters: undefined,
+        requestTemplates: undefined,
+        templateSelectionExpression: undefined,
+        timeoutInMillis: undefined,
+        tlsConfig: undefined,
+      };
+    }
+    default: {
+      return {};
+    }
+  }
+}
+
 class Api extends pulumi.dynamic.Resource {
   constructor(name, props = {}, ops) {
     super({
@@ -63,7 +139,7 @@ class Api extends pulumi.dynamic.Resource {
           },
         };
       },
-      async delete(id, inputs) {
+      async delete(id) {
         const creds = identifyCredentials(props._credentials);
         const gateway = new AWS.ApiGatewayV2(creds);
 
@@ -88,7 +164,7 @@ class Api extends pulumi.dynamic.Resource {
           },
         };
       },
-    }, name, props, ops);
+    }, name, { ...serviceOutputs('api'), ...props }, ops);
   }
 }
 
@@ -112,7 +188,6 @@ class Integration extends pulumi.dynamic.Resource {
             ...camelKeys(integration),
           },
         };
-
       },
       async delete(id, inputs) {
         const creds = identifyCredentials(props._credentials);
@@ -140,7 +215,7 @@ class Integration extends pulumi.dynamic.Resource {
           },
         };
       },
-    }, name, props, ops);
+    }, name, { ...serviceOutputs('integration'), ...props }, ops);
   }
 }
 
@@ -193,7 +268,57 @@ class Route extends pulumi.dynamic.Resource {
           },
         };
       },
-    }, name, props, ops);
+    }, name, { ...serviceOutputs('route'), ...props }, ops);
+  }
+}
+
+class Stage extends pulumi.dynamic.Resource {
+  constructor(name, props = {}, ops) {
+    super({
+      async create(inputs) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        const stage = await gateway.createStage({
+          ApiId: inputs.apiId,
+          StageName: inputs.name,
+          AutoDeploy: true,
+        }).promise();
+
+        return {
+          id: stage.StageName,
+          outs: {
+            ...inputs,
+            ...camelKeys(stage),
+          },
+        };
+      },
+      async delete(id, inputs) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        await gateway.deleteStage({
+          ApiId: inputs.apiId,
+          StageName: id,
+        }).promise().catch(console.log);
+      },
+      async update(id, olds, news) {
+        const creds = identifyCredentials(props._credentials);
+        const gateway = new AWS.ApiGatewayV2(creds);
+
+        const stage = await gateway.updateStage({
+          ApiId: olds.apiId,
+          StageName: id,
+        }).promise();
+
+        return {
+          outs: {
+            ...news,
+            ...camelKeys(stage),
+          },
+        };
+      },
+    }, name, { ...serviceOutputs('stage'), ...props }, ops);
   }
 }
 
@@ -230,17 +355,13 @@ export default class WebsocketApi extends pulumi.ComponentResource {
       });
     }
 
-    // Left off here
-    const connectionsTable = new aws.dynamodb.Table('connections-table', {
-      name: 'Connections',
-      attributes: [
-        {
-          name: 'id',
-          type: 'S',
-        }
-      ],
-      billingMode: 'PAY_PER_REQUEST',
-      hashKey: 'id',
+    const stage = new Stage(`${name}-stage`, { name: props.stageName || 'stage', apiId: api.id, _credentials }, { parent: this });
+
+    // console.log({ api, stage });
+    this.url = pulumi.interpolate`${api.apiEndpoint}/${stage.stageName}`;
+
+    this.registerOutputs({
+      url: this.url,
     });
   }
 }
