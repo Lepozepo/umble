@@ -9,6 +9,9 @@ const apollo = new Lambda('umble', {
     wsHandler: 'App.ws',
     eventHandler: 'App.event',
   },
+  environment: {
+    NODE_ENV: 'production',
+  },
 });
 
 exports.url = apollo.api.url;

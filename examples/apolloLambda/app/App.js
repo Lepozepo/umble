@@ -1,9 +1,8 @@
-const { ApolloServer, PubSub } = require('umble-apollo-server');
-const { gql } = require('apollo-server');
+const { ApolloServer, PubSub } = require('../../../server/pkg');
 
-const pubSub = new PubSub();
+const pubSub = new PubSub({ dev: process.env.NODE_ENV === 'development' });
 
-const typeDefs = gql`
+const typeDefs = `
   type Mutation {
     broadcastMessage(message: String!): String!
   }
@@ -46,3 +45,8 @@ const server = new ApolloServer({
 exports.ws = server.handlers.ws();
 exports.http = server.handlers.http();
 exports.event = server.handlers.event();
+
+exports.dev = server.services.run(({ url, subscriptionsUrl }) => {
+  console.log(`Server ready at ${url}`);
+  console.log(`Subscriptions ready at ${subscriptionsUrl}`);
+});
