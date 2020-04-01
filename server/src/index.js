@@ -7,3 +7,4 @@ export {
   DynamoDBEventStore,
   DynamoDBSubscriptionManager,
 } from 'aws-lambda-graphql';
+export { default as cli } from './cli';
