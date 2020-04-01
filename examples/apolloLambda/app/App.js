@@ -1,4 +1,4 @@
-const { ApolloServer, PubSub } = require('../../../server/pkg');
+const { ApolloServer, PubSub } = require('umble-apollo-server');
 
 const pubSub = new PubSub({ dev: process.env.NODE_ENV === 'development' });
 
