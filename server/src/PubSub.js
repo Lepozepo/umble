@@ -1,9 +1,11 @@
 import {
   DynamoDBEventStore,
   PubSub as ALGPubSub,
+  withFilter as withALGFilter,
 } from 'aws-lambda-graphql';
 import {
   PubSub as InMemoryPubSub,
+  withFilter,
 } from 'apollo-server';
 
 export default class PubSub {
@@ -34,4 +36,11 @@ export default class PubSub {
   }
 
   publish = (event, payload) => this.engine.publish(event, payload);
+
+  withFilter = (subscription, filterFn) => {
+    if (this.props.dev) {
+      return withFilter(subscription, filterFn);
+    }
+    return withALGFilter(subscription, filterFn);
+  }
 }
