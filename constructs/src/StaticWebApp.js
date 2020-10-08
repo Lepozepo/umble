@@ -93,6 +93,8 @@ export default class StaticWebApp extends pulumi.ComponentResource {
       this.cdn = cdn;
     }
 
+    this.bucketObjects = [];
+
     const hasBuildCmd = !isEmpty(buildCmd);
 
     if (hasBuildCmd) {
@@ -120,26 +122,28 @@ export default class StaticWebApp extends pulumi.ComponentResource {
         // Previews will not be accurate
         /* eslint-disable */
         for (const dir of readdirp(buildDir)) {
-          new aws.s3.BucketObject(dir, {
+          const obj = new aws.s3.BucketObject(dir, {
             bucket,
             source: new pulumi.asset.FileAsset(dir),
             key: path.relative(buildDir, dir),
             contentType: mime.getType(dir) || undefined,
             etag: md5File.sync(dir),
           }, { parent: this });
+          this.bucketObjects.push(obj);
         }
         /* eslint-enable */
       });
     } else {
       /* eslint-disable */
       for (const dir of readdirp(buildDir)) {
-        new aws.s3.BucketObject(dir, { 
+        const obj = new aws.s3.BucketObject(dir, { 
           bucket,
           source: new pulumi.asset.FileAsset(dir),
           key: path.relative(buildDir, dir),
           contentType: mime.getType(dir) || undefined,
           etag: md5File.sync(dir),
         }, { parent: this });
+        this.bucketObjects.push(obj);
       }
       /* eslint-enable */
     }
@@ -148,6 +152,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
       bucket: this.bucket,
       policy: this.policy,
       cdn: this.cdn,
+      bucketObjects: this.bucketObjects,
     });
   }
 }
