@@ -31,7 +31,7 @@
     ]
   },
   "dependencies": {
-    "@pulumi/aws": "2.13.1",
+    "@pulumi/aws": "3.6.1",
     "@pulumi/awsx": "^0.22.0",
     "@pulumi/pulumi": "^2.11.2",
     "@pulumi/random": "^2.3.1",
