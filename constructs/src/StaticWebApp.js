@@ -16,6 +16,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
       buildCmd,
       environment = {},
       useCDN = false,
+      bucket: bucketConfig,
     } = props;
 
     if (!buildDir) throw new Error('buildDir is required!');
@@ -26,6 +27,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
         errorDocument: 'index.html',
       },
       forceDestroy: true,
+      ...bucketConfig,
     }, { parent: this });
     this.bucket = bucket;
 
