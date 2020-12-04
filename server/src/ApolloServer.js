@@ -11,7 +11,7 @@ import express from 'express';
 import http from 'http';
 
 class ExtendedExpressServer extends ExpressServer {
-  async listen(...opts) {
+  listen(...opts) {
     const app = express();
 
     app.disable('x-powered-by');
@@ -30,22 +30,26 @@ class ExtendedExpressServer extends ExpressServer {
           },
     });
 
-    const httpServer = http.createServer(app);
-    this.httpServer = httpServer;
+    const create = async () => {
+      const httpServer = http.createServer(app);
+      this.httpServer = httpServer;
 
-    if (this.subscriptionServerOptions) {
-      this.installSubscriptionHandlers(httpServer);
-    }
+      if (this.subscriptionServerOptions) {
+        this.installSubscriptionHandlers(httpServer);
+      }
 
-    await new Promise((resolve) => {
-      httpServer.once('listening', resolve);
-      // If the user passed a callback to listen, it'll get called in addition
-      // to our resolver. They won't have the ability to get the ServerInfo
-      // object unless they use our Promise, though.
-      httpServer.listen(...(opts.length ? opts : [{ port: 4000 }]));
-    });
+      await new Promise((resolve) => {
+        httpServer.once('listening', resolve);
+        // If the user passed a callback to listen, it'll get called in addition
+        // to our resolver. They won't have the ability to get the ServerInfo
+        // object unless they use our Promise, though.
+        httpServer.listen(...(opts.length ? opts : [{ port: 4000 }]));
+      });
 
-    return [this.createServerInfo(httpServer, this.subscriptionsPath), app];
+      this.createServerInfo(httpServer, this.subscriptionsPath);
+    };
+
+    return [create, app];
   }
 }
 
@@ -103,14 +107,14 @@ export default class ApolloServer {
     };
 
     this.services = {
-      run: (fn) => () => {
-        const [server, app] = new ExtendedExpressServer({
+      run: (fn) => async () => {
+        const [createServer, app] = new ExtendedExpressServer({
           ...otherProps,
           context,
           subscriptions,
         });
 
-        Object.entries(routes).forEach(([k, v]) => {
+        Object.entries(routes || {}).forEach(([k, v]) => {
           const [httpMethod, ...pathParts] = k.split('/');
           const path = `/${pathParts.join('/')}`;
           if (path === '/') return null;
@@ -122,6 +126,7 @@ export default class ApolloServer {
           });
         });
 
+        const server = await createServer();
         server.listen().then(fn);
       },
     };
