@@ -6,7 +6,7 @@ import {
 import {
   PubSub as InMemoryPubSub,
   withFilter,
-} from 'apollo-server';
+} from 'apollo-server-express';
 
 export default class PubSub {
   constructor(props = {}) {
