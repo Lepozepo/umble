@@ -30,7 +30,7 @@ class ExtendedExpressServer extends ExpressServer {
           },
     });
 
-    const create = async () => {
+    const run = async () => {
       const httpServer = http.createServer(app);
       this.httpServer = httpServer;
 
@@ -49,7 +49,7 @@ class ExtendedExpressServer extends ExpressServer {
       this.createServerInfo(httpServer, this.subscriptionsPath);
     };
 
-    return [create, app];
+    return [run, app];
   }
 }
 
@@ -107,12 +107,13 @@ export default class ApolloServer {
     };
 
     this.services = {
-      run: (fn) => async () => {
-        const [createServer, app] = new ExtendedExpressServer({
+      run: (fn, ops) => async () => {
+        const server = new ExtendedExpressServer({
           ...otherProps,
           context,
           subscriptions,
         });
+        const [run, app] = server.listen(ops);
 
         Object.entries(routes || {}).forEach(([k, v]) => {
           const [httpMethod, ...pathParts] = k.split('/');
@@ -126,8 +127,7 @@ export default class ApolloServer {
           });
         });
 
-        const server = await createServer();
-        server.listen().then(fn);
+        run().then(fn);
       },
     };
   }
