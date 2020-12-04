@@ -42,7 +42,7 @@ export default class ApolloServer {
     this.handlers = {
       ws: () => this.server.createWebSocketHandler(),
       event: () => this.server.createEventHandler(),
-      http: (options) => async (event, ctx, cb) => {
+      http: (options) => (event, ctx) => {
         const handler = this.server.createHttpHandler(options);
 
         if (event.isBase64Encoded) {
@@ -51,11 +51,10 @@ export default class ApolloServer {
         }
 
         if (routes && routes?.[`${event.httpMethod}/${event.path}`]) {
-          const r = await routes[`${event.httpMethod}/${event.path}`]?.(event, ctx);
-          return cb(null, r);
+          return routes[`${event.httpMethod}/${event.path}`]?.(event, ctx);
         }
 
-        return handler(event, ctx, cb);
+        return handler(event, ctx);
       },
     };
 
@@ -75,8 +74,8 @@ export default class ApolloServer {
 
           return app?.[httpMethod.toLowerCase()](path, async (req, res) => {
             const r = await v(req);
-            if (r?.headers) res.set(r?.headers);
-            res.status(r?.statusCode || 200).send(r?.body || '');
+            // if (r?.headers) res.set(r?.headers);
+            res.status(200).send(r || '');
           });
         });
 
