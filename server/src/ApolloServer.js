@@ -80,7 +80,10 @@ export default class ApolloServer {
           });
         });
 
-        server.listen(ops).then(fn);
+        server.listen({
+          port: 4000,
+          ...ops,
+        }).then(fn);
       },
     };
   }
