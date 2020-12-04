@@ -4,54 +4,7 @@ import {
   DynamoDBSubscriptionManager,
   Server,
 } from 'aws-lambda-graphql';
-import {
-  ApolloServer as ExpressServer,
-} from 'apollo-server';
-import express from 'express';
-import http from 'http';
-
-class ExtendedExpressServer extends ExpressServer {
-  listen(...opts) {
-    const app = express();
-
-    app.disable('x-powered-by');
-
-    // provide generous values for the getting started experience
-    super.applyMiddleware({
-      app,
-      path: '/',
-      bodyParserConfig: { limit: '50mb' },
-      onHealthCheck: this.onHealthCheck,
-      cors:
-        typeof this.cors !== 'undefined'
-          ? this.cors
-          : {
-            origin: '*',
-          },
-    });
-
-    const run = async () => {
-      const httpServer = http.createServer(app);
-      this.httpServer = httpServer;
-
-      if (this.subscriptionServerOptions) {
-        this.installSubscriptionHandlers(httpServer);
-      }
-
-      await new Promise((resolve) => {
-        httpServer.once('listening', resolve);
-        // If the user passed a callback to listen, it'll get called in addition
-        // to our resolver. They won't have the ability to get the ServerInfo
-        // object unless they use our Promise, though.
-        httpServer.listen(...(opts.length ? opts : [{ port: 4000 }]));
-      });
-
-      this.createServerInfo(httpServer, this.subscriptionsPath);
-    };
-
-    return [run, app];
-  }
-}
+import ExpressServer from './ExpressServer';
 
 export default class ApolloServer {
   constructor(props = {}) {
@@ -108,12 +61,12 @@ export default class ApolloServer {
 
     this.services = {
       run: (fn, ops) => async () => {
-        const server = new ExtendedExpressServer({
+        const server = new ExpressServer({
           ...otherProps,
           context,
           subscriptions,
         });
-        const [run, app] = server.listen(ops);
+        const app = server.setupApp();
 
         Object.entries(routes || {}).forEach(([k, v]) => {
           const [httpMethod, ...pathParts] = k.split('/');
@@ -127,7 +80,7 @@ export default class ApolloServer {
           });
         });
 
-        run().then(fn);
+        server.listen(ops).then(fn);
       },
     };
   }
