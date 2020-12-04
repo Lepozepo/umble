@@ -45,11 +45,6 @@ export default class ApolloServer {
       http: (options) => (event, ctx) => {
         const handler = this.server.createHttpHandler(options);
 
-        if (event.isBase64Encoded) {
-          // eslint-disable-next-line
-          event.body = Buffer.from(event.body, 'base64').toString();
-        }
-
         if (routes && routes?.[`${event.httpMethod}/${event.path}`]) {
           return routes[`${event.httpMethod}/${event.path}`]?.(event, ctx);
         }
