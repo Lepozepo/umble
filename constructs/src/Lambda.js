@@ -113,6 +113,10 @@ export default class Lambda extends pulumi.ComponentResource {
         ],
         billingMode: 'PAY_PER_REQUEST',
         hashKey: 'id',
+        ttl: {
+          attributeName: 'ttl',
+          enabled: true,
+        },
       });
 
       this.subscriptionsTable = new aws.dynamodb.Table('umble-subscriptions', {
@@ -130,6 +134,10 @@ export default class Lambda extends pulumi.ComponentResource {
         billingMode: 'PAY_PER_REQUEST',
         hashKey: 'event',
         rangeKey: 'subscriptionId',
+        ttl: {
+          attributeName: 'ttl',
+          enabled: true,
+        },
       });
 
       this.operationsTable = new aws.dynamodb.Table('umble-operations', {
@@ -142,6 +150,10 @@ export default class Lambda extends pulumi.ComponentResource {
         ],
         billingMode: 'PAY_PER_REQUEST',
         hashKey: 'subscriptionId',
+        ttl: {
+          attributeName: 'ttl',
+          enabled: true,
+        },
       });
 
       this.eventsTable = new aws.dynamodb.Table('umble-events', {
@@ -156,6 +168,10 @@ export default class Lambda extends pulumi.ComponentResource {
         hashKey: 'id',
         streamEnabled: true,
         streamViewType: 'NEW_IMAGE',
+        ttl: {
+          attributeName: 'ttl',
+          enabled: true,
+        },
       });
     }
 
