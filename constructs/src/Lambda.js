@@ -315,8 +315,10 @@ export default class Lambda extends pulumi.ComponentResource {
       }, { parent: this });
 
       this.eventsTable.onEvent('umble-event-handler', this.eventLambda, {
-        batchSize: 100,
+        batchSize: 50,
+        maximumRetryAttempts: 4,
         startingPosition: 'LATEST',
+        ...websockets.eventsConfig,
       });
     }
 
