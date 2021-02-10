@@ -10,7 +10,7 @@
   "scripts": {
     "pack:build": "pika build",
     "pack:publish": "pika publish",
-    "test": "npx npm-run-all --parallel test:*",
+    "test": "npm run test:lint & npm run test:unit",
     "test:lint": "eslint ./src --quiet -c ./.eslintrc.js",
     "test:unit": "jest --ci --passWithNoTests",
     "version": "npm run pack:build"
