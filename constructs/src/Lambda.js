@@ -335,6 +335,10 @@ export default class Lambda extends pulumi.ComponentResource {
       websocketApi: this.websocketApi,
       wsLambda: this.wsLambda,
       eventLambda: this.eventLambda,
+      connectionsTable: this.connectionsTable,
+      subscriptionsTable: this.subscriptionsTable,
+      operationsTable: this.operationsTable,
+      eventsTable: this.eventsTable,
     }, isNil));
   }
 }
