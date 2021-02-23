@@ -117,7 +117,7 @@ export default class Lambda extends pulumi.ComponentResource {
           attributeName: 'ttl',
           enabled: true,
         },
-      });
+      }, { parent: this });
 
       this.subscriptionsTable = new aws.dynamodb.Table('umble-subscriptions', {
         name: pulumi.interpolate`Subscriptions-${stageName}-${internalId.hex}`,
@@ -138,7 +138,7 @@ export default class Lambda extends pulumi.ComponentResource {
           attributeName: 'ttl',
           enabled: true,
         },
-      });
+      }, { parent: this });
 
       this.operationsTable = new aws.dynamodb.Table('umble-operations', {
         name: pulumi.interpolate`SubscriptionOperations-${stageName}-${internalId.hex}`,
@@ -154,7 +154,7 @@ export default class Lambda extends pulumi.ComponentResource {
           attributeName: 'ttl',
           enabled: true,
         },
-      });
+      }, { parent: this });
 
       this.eventsTable = new aws.dynamodb.Table('umble-events', {
         name: pulumi.interpolate`Events-${stageName}-${internalId.hex}`,
@@ -172,7 +172,7 @@ export default class Lambda extends pulumi.ComponentResource {
           attributeName: 'ttl',
           enabled: true,
         },
-      });
+      }, { parent: this });
     }
 
     const lambdaConfig = {
