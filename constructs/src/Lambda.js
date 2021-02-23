@@ -104,7 +104,7 @@ export default class Lambda extends pulumi.ComponentResource {
 
     if (websockets?.enabled) {
       this.connectionsTable = new aws.dynamodb.Table('umble-connections', {
-        name: pulumi.interpolate`Connections-${stageName}-${internalId.hex}`,
+        name: pulumi.interpolate`connections-${stageName}-${internalId.hex}`,
         attributes: [
           {
             name: 'id',
@@ -120,7 +120,7 @@ export default class Lambda extends pulumi.ComponentResource {
       }, { parent: this });
 
       this.subscriptionsTable = new aws.dynamodb.Table('umble-subscriptions', {
-        name: pulumi.interpolate`Subscriptions-${stageName}-${internalId.hex}`,
+        name: pulumi.interpolate`subscriptions-${stageName}-${internalId.hex}`,
         attributes: [
           {
             name: 'event',
@@ -141,7 +141,7 @@ export default class Lambda extends pulumi.ComponentResource {
       }, { parent: this });
 
       this.operationsTable = new aws.dynamodb.Table('umble-operations', {
-        name: pulumi.interpolate`SubscriptionOperations-${stageName}-${internalId.hex}`,
+        name: pulumi.interpolate`subscriptionOperations-${stageName}-${internalId.hex}`,
         attributes: [
           {
             name: 'subscriptionId',
@@ -157,7 +157,7 @@ export default class Lambda extends pulumi.ComponentResource {
       }, { parent: this });
 
       this.eventsTable = new aws.dynamodb.Table('umble-events', {
-        name: pulumi.interpolate`Events-${stageName}-${internalId.hex}`,
+        name: pulumi.interpolate`events-${stageName}-${internalId.hex}`,
         attributes: [
           {
             name: 'id',
