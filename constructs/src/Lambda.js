@@ -10,7 +10,6 @@ import {
 import p from 'path';
 import cp from 'child_process';
 import readdirp from 'recursive-readdir-sync';
-import fs from 'fs';
 import uuid from 'uuid/v3';
 import md5File from 'md5-file';
 import WebsocketApi from './WebsocketApi';
@@ -20,6 +19,7 @@ export default class Lambda extends pulumi.ComponentResource {
     super('umble:lambda:Lambda', name, {}, ops);
 
     const {
+      installer = 'npm',
       source,
       handler = 'index.http',
       websockets = {},
@@ -37,7 +37,6 @@ export default class Lambda extends pulumi.ComponentResource {
       cors = false,
     } = props;
 
-    const installer = fs.existsSync(`${source}/yarn.lock`) ? 'yarn' : 'npm';
     cp.execSync(buildCmd || `cd ${source} && ${installer} install --production && cd ../`, { stdio: 'inherit' });
 
     const role = new aws.iam.Role(`${name}-role`, {
