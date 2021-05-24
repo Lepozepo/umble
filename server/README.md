@@ -1,15 +1,13 @@
 # Umble
 ## Humble Pulumi Constructs for Apollo/React Developers
 
-### Constructs
-
 To use Umble you'll need to install pulumi and umble's subpackages.
 
-For your infrastructure: `npm i umble`
+For your infrastructure: `npx install-peerdeps umble`
 
 For your apollo server: `npm i umble-apollo-server`
 
-
+### Constructs
 #### Service
 Here is a quick example on how to use it. The `./app` directory requires a Dockerfile that exposes the service on port 4000, pulumi will use docker to build your image.
 
