@@ -221,7 +221,7 @@ export default class Lambda extends pulumi.ComponentResource {
           eventHandler: httpLambda,
         },
         {
-          path: `${path}/{proxy+}`,
+          path: p.join(path, '/{proxy+}'),
           method: 'ANY',
           eventHandler: httpLambda,
         },
