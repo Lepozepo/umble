@@ -24,6 +24,7 @@ export default class Lambda extends pulumi.ComponentResource {
       handler = 'index.http',
       websockets = {},
       path = '/',
+      routes,
       timeout = 300,
       runtime = aws.lambda.NodeJS10dXRuntime,
       environment,
@@ -213,9 +214,14 @@ export default class Lambda extends pulumi.ComponentResource {
 
     const api = new awsx.apigateway.API(`${name}-api`, {
       stageName,
-      routes: [
+      routes: routes?.(httpLambda, props) || [
         {
           path,
+          method: 'ANY',
+          eventHandler: httpLambda,
+        },
+        {
+          path: `${path}/{proxy+}`,
           method: 'ANY',
           eventHandler: httpLambda,
         },
