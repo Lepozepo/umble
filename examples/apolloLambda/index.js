@@ -1,4 +1,4 @@
-const { Lambda } = require('../../constructs/pkg/dist-node');
+const { Lambda } = require('umble');
 
 const apollo = new Lambda('umble', {
   source: './app',
