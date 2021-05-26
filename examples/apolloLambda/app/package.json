@@ -4,9 +4,9 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "NODE_ENV='development' umble -e ./App.js -f dev"
+    "start": "NODE_ENV='development' npx -p umble-apollo-server umble -e ./App.js -f dev"
   },
   "dependencies": {
-    "umble-apollo-server": "0.0.7"
+    "umble-apollo-server": "file:../../../server/pkg"
   }
 }

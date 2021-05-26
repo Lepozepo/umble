@@ -40,6 +40,11 @@ const server = new ApolloServer({
   resolvers,
   playground: true,
   introspection: true,
+  routes: {
+    'POST/thing': (evtOrReq) => {
+      console.log('hi');
+    },
+  },
 });
 
 exports.ws = server.handlers.ws();
