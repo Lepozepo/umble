@@ -1,7 +1,7 @@
 import url from 'url';
 import * as microrouter from 'microrouter';
 import { ApolloServer } from 'apollo-server-micro';
-import micro from 'micro';
+import micro, { send } from 'micro';
 import initializeCors from 'micro-cors';
 
 export default class MicroServer {
@@ -69,7 +69,10 @@ export default class MicroServer {
           const path = `/${pathParts.join('/')}`;
           if (path === '/') return null;
 
-          return microrouter[httpMethod.toLowerCase()](path, fn);
+          return microrouter[httpMethod.toLowerCase()](path, async (req, res) => {
+            const { statusCode, body } = await fn(req, res);
+            send(res, statusCode, body);
+          });
         }),
       );
     });
