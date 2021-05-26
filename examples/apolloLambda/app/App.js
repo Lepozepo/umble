@@ -41,8 +41,10 @@ const server = new ApolloServer({
   playground: true,
   introspection: true,
   routes: {
-    'POST/thing': (evtOrReq) => {
+    'POST/thing': async (evtOrReq) => {
+      console.log(evtOrReq);
       console.log('hi');
+      return { body: 'hello world!', statusCode: 200 };
     },
   },
 });
