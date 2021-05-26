@@ -46,8 +46,8 @@ export default class ApolloServer {
         const handler = this.server.createHttpHandler(options);
 
         console.log(event);
-        if (routes && routes?.[`${event.httpMethod}/${event.path}`]) {
-          return routes[`${event.httpMethod}/${event.path}`]?.(event, ctx);
+        if (routes && routes?.[`${event.httpMethod}${event.path}`]) {
+          return routes[`${event.httpMethod}${event.path}`]?.(event, ctx);
         }
 
         return handler(event, ctx);
