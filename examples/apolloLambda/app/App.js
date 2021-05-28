@@ -1,4 +1,4 @@
-const { ApolloServer, PubSub } = require('umble-apollo-server');
+const { ApolloServer, PubSub, parseEvent } = require('umble-apollo-server');
 
 const pubSub = new PubSub({ dev: process.env.NODE_ENV === 'development' });
 
@@ -42,8 +42,8 @@ const server = new ApolloServer({
   introspection: true,
   routes: {
     'POST/thing': async (evtOrReq) => {
-      // console.log(evtOrReq);
-      console.log('hi');
+      const parsed = await parseEvent(evtOrReq);
+      console.log(parsed);
       return { body: 'hello world!', statusCode: 200 };
     },
   },
