@@ -4,7 +4,7 @@ import {
   DynamoDBSubscriptionManager,
   Server,
 } from 'aws-lambda-graphql';
-import ExpressServer from './ExpressServer';
+import MicroServer from './MicroServer';
 
 export default class ApolloServer {
   constructor(props = {}) {
@@ -43,35 +43,22 @@ export default class ApolloServer {
       ws: () => this.server.createWebSocketHandler(),
       event: () => this.server.createEventHandler(),
       http: (options) => (event, ctx) => {
-        const handler = this.server.createHttpHandler(options);
-
-        if (routes && routes?.[`${event.httpMethod}/${event.path}`]) {
-          return routes[`${event.httpMethod}/${event.path}`]?.(event, ctx);
+        if (routes && routes?.[`${event.httpMethod}${event.path}`]) {
+          return routes[`${event.httpMethod}${event.path}`]?.(event, ctx);
         }
 
+        const handler = this.server.createHttpHandler(options);
         return handler(event, ctx);
       },
     };
 
     this.services = {
       run: (fn, ops) => async () => {
-        const server = new ExpressServer({
+        const server = new MicroServer({
           ...otherProps,
           context,
           subscriptions,
-        });
-        const app = server.setupApp();
-
-        Object.entries(routes || {}).forEach(([k, v]) => {
-          const [httpMethod, ...pathParts] = k.split('/');
-          const path = `/${pathParts.join('/')}`;
-          if (path === '/') return null;
-
-          return app?.[httpMethod.toLowerCase()](path, async (req, res) => {
-            const r = await v(req);
-            // if (r?.headers) res.set(r?.headers);
-            res.status(200).send(r || '');
-          });
+          routes,
         });
 
         server.listen({

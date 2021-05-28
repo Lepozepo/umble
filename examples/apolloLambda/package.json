@@ -7,9 +7,12 @@
     "test": "test"
   },
   "dependencies": {
-    "@pulumi/aws": "^1.22.0",
-    "@pulumi/awsx": "^0.19.2",
-    "@pulumi/pulumi": "^1.11.1"
+    "@pulumi/aws": "^4.5.1",
+    "@pulumi/awsx": "^0.30.0",
+    "@pulumi/pulumi": "^3.3.1",
+    "@pulumi/random": "^4.1.1",
+    "@pulumi/tls": "^4.0.0",
+    "umble": "^3.0.1-1"
   },
   "devDependencies": {},
   "scripts": {

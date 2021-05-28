@@ -8,3 +8,4 @@ export {
   DynamoDBSubscriptionManager,
 } from 'aws-lambda-graphql';
 export { default as cli } from './cli';
+export { default as parseEvent } from './parseEvent';
