@@ -9,6 +9,15 @@ export default class MicroServer {
     this.props = props;
     this.path = '/';
 
+    this.cors = cors({
+      allowMethods: this.props?.cors?.methods || ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowHeaders: this.props?.cors?.allowedHeaders || ['X-Requested-With', 'Access-Control-Allow-Origin', 'X-HTTP-Method-Override', 'Content-Type', 'Authorization', 'Accept'],
+      allowCredentials: this.props?.cors?.credentials || true,
+      exposeHeaders: this.props?.cors?.exposedHeaders || [],
+      maxAge: this.props?.cors?.maxAge || 86400,
+      origin: this.props?.cors?.origin || '*',
+    });
+
     this.apollo = new ApolloServer({
       ...this.props,
       subscriptions: {
@@ -57,17 +66,6 @@ export default class MicroServer {
     return serverInfo;
   }
 
-  corsConfig() {
-    return {
-      allowMethods: this.props?.cors?.methods || ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowHeaders: this.props?.cors?.allowedHeaders || ['X-Requested-With', 'Access-Control-Allow-Origin', 'X-HTTP-Method-Override', 'Content-Type', 'Authorization', 'Accept'],
-      allowCredentials: this.props?.cors?.credentials || true,
-      exposeHeaders: this.props?.cors?.exposedHeaders || [],
-      maxAge: this.props?.cors?.maxAge || 86400,
-      origin: this.props?.cors?.origin || '*',
-    };
-  }
-
   async listen(...opts) {
     const serverRoutes = await this.apollo.start().then(async () => {
       const handler = await this.apollo.createHandler({ path: this.path });
@@ -87,7 +85,7 @@ export default class MicroServer {
       );
     });
 
-    const server = micro(cors(this.corsConfig())((req, res) => (
+    const server = micro(this.cors((req, res) => (
       req.method === 'OPTIONS' ? res.end() : serverRoutes(req, res)
     )));
 
