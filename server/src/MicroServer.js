@@ -2,13 +2,21 @@ import url from 'url';
 import * as microrouter from 'microrouter';
 import { ApolloServer } from 'apollo-server-micro';
 import micro, { send } from 'micro';
-import initializeCors from 'micro-cors';
+import cors from 'micro-cors';
 
 export default class MicroServer {
   constructor(props) {
     this.props = props;
     this.path = '/';
-    this.cors = this.props?.cors && initializeCors();
+
+    this.cors = cors({
+      allowMethods: this.props?.cors?.methods || ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowHeaders: this.props?.cors?.allowedHeaders || ['X-Requested-With', 'Access-Control-Allow-Origin', 'X-HTTP-Method-Override', 'Content-Type', 'Authorization', 'Accept'],
+      allowCredentials: this.props?.cors?.credentials || true,
+      exposeHeaders: this.props?.cors?.exposedHeaders || [],
+      maxAge: this.props?.cors?.maxAge || 86400,
+      origin: this.props?.cors?.origin || '*',
+    });
 
     this.apollo = new ApolloServer({
       ...this.props,
@@ -77,14 +85,9 @@ export default class MicroServer {
       );
     });
 
-    let server;
-    if (this.props?.cors) {
-      server = micro(this.cors((req, res) => (
-        req.method === 'OPTIONS' ? res.end() : serverRoutes(req, res)
-      )));
-    } else {
-      server = micro(serverRoutes);
-    }
+    const server = micro(this.cors((req, res) => (
+      req.method === 'OPTIONS' ? res.end() : serverRoutes(req, res)
+    )));
 
     if (this.apollo.subscriptionServerOptions) {
       this.apollo.installSubscriptionHandlers(server);

@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "micro": "^9.3.4",
-    "umble-apollo-server": "^7.0.0-5"
+    "umble-apollo-server": "^7.0.1-1"
   }
 }

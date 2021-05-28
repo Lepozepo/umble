@@ -16,6 +16,7 @@ export default class ApolloServer {
       subscriptionManager,
       subscriptions,
       routes,
+      cors,
       ...otherProps
     } = props;
 
@@ -47,7 +48,10 @@ export default class ApolloServer {
           return routes[`${event.httpMethod}${event.path}`]?.(event, ctx);
         }
 
-        const handler = this.server.createHttpHandler(options);
+        const handler = this.server.createHttpHandler({
+          ...options,
+          ...(cors ? { cors } : {}),
+        });
         return handler(event, ctx);
       },
     };
@@ -59,6 +63,7 @@ export default class ApolloServer {
           context,
           subscriptions,
           routes,
+          cors,
         });
 
         server.listen({
