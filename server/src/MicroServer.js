@@ -72,14 +72,14 @@ export default class MicroServer {
       return microrouter.router(
         microrouter.post(this.path, handler),
         microrouter.get(this.path, handler),
-        ...Object.entries(this.props.routes).map(([route, fn]) => {
+        ...Object.entries(this.props.routes || {}).map(([route, fn]) => {
           const [httpMethod, ...pathParts] = route.split('/');
           const path = `/${pathParts.join('/')}`;
           if (path === '/') return null;
 
           return microrouter[httpMethod.toLowerCase()](path, async (req, res) => {
             const { statusCode, body } = await fn(req, res);
-            send(res, statusCode, body);
+            return send(res, statusCode, body);
           });
         }),
       );
