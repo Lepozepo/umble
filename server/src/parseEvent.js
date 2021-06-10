@@ -1,4 +1,4 @@
-import { json } from 'micro';
+import { json, buffer } from 'micro';
 
 function parseAwsEvent(event) {
   let body = event?.body;
@@ -21,6 +21,7 @@ function parseAwsEvent(event) {
 
   return {
     body,
+    rawBody: event?.body,
     path: `${event.path}${queryString}`,
     headers: event.headers,
   };
@@ -28,9 +29,11 @@ function parseAwsEvent(event) {
 
 async function parseMicroEvent(req) {
   const body = await json(req, { limit: '50mb' });
+  const rawBody = await buffer(req, { limit: '50mb' });
 
   return {
     body,
+    rawBody,
     path: req.url,
     headers: req.headers,
   };
