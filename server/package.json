@@ -1,6 +1,6 @@
 {
   "name": "umble-apollo-server",
-  "version": "7.0.2",
+  "version": "7.0.3",
   "description": "React Apollo Server with Subscription support on Umble",
   "main": "src/index.js",
   "repository": {
