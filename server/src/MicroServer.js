@@ -92,7 +92,7 @@ export default class MicroServer {
       server = micro(serverRoutes);
     } else {
       server = micro(this.cors((req, res) => (
-        req.method === 'OPTIONS' ? res.end() : serverRoutes(req, res)
+        req.method === 'OPTIONS' ? send(res, 200, 'ok!') : serverRoutes(req, res)
       )));
     }
 
