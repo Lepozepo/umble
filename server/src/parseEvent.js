@@ -31,7 +31,7 @@ function parseAwsEvent(event) {
     body,
     rawBody,
     path: `${event.path}${queryString}`,
-    headers: event.headers,
+    headers,
   };
 }
 
