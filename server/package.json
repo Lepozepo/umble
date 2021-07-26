@@ -9,7 +9,7 @@
   },
   "scripts": {
     "pack:build": "pika build",
-    "pack:publish": "pika publish",
+    "pack:publish": "pika publish --no-tests",
     "test": "npx npm-run-all --parallel test:*",
     "test:lint": "eslint ./src --quiet -c ./.eslintrc.js",
     "test:unit": "jest --ci --passWithNoTests",
