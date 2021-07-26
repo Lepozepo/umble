@@ -2,8 +2,11 @@ import { json, buffer } from 'micro';
 
 function parseAwsEvent(event) {
   let body = event?.body;
+  let rawBody = event?.body;
+
   if (event.isBase64Encoded) {
     body = Buffer.from(event.body, 'base64').toString();
+    rawBody = Buffer.from(event.body, 'base64').toString();
   }
 
   try {
@@ -19,9 +22,14 @@ function parseAwsEvent(event) {
     queryString = `?${queryString}`;
   }
 
+  const headers = {};
+  Object.entries(event.headers).forEach(([k, v]) => {
+    headers[k.toLowerCase()] = v;
+  });
+
   return {
     body,
-    rawBody: event?.body,
+    rawBody,
     path: `${event.path}${queryString}`,
     headers: event.headers,
   };
@@ -31,11 +39,16 @@ async function parseMicroEvent(req) {
   const body = await json(req, { limit: '50mb' });
   const rawBody = await buffer(req, { limit: '50mb' });
 
+  const headers = {};
+  Object.entries(req.headers).forEach(([k, v]) => {
+    headers[k.toLowerCase()] = v;
+  });
+
   return {
     body,
     rawBody,
     path: req.url,
-    headers: req.headers,
+    headers,
   };
 }
 
