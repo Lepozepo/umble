@@ -116,7 +116,13 @@ export default class StaticWebApp extends pulumi.ComponentResource {
       pulumi.all([_build, bucket.bucket]).apply((r) => {
         const [build] = r;
 
-        cp.execSync(build);
+        try {
+          cp.execSync(build);
+        } catch (err) {
+          console.log(err);
+          throw err;
+        }
+
         // NOTE: Resource creation is currently allowed after apply
         // but discouraged for obvious reasons
         // Previews will not be accurate
