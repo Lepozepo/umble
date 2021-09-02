@@ -120,6 +120,8 @@ export default class StaticWebApp extends pulumi.ComponentResource {
           cp.execSync(build);
         } catch (err) {
           console.log(err);
+          console.log(err.stderr.toString());
+          console.log(err.stdout.toString());
           throw err;
         }
 
