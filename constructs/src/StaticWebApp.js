@@ -12,6 +12,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
     super('umble:staticWebApp:StaticWebApp', name, {}, ops);
 
     const {
+      tags,
       buildDir,
       buildCmd,
       environment = {},
@@ -22,6 +23,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
     if (!buildDir) throw new Error('buildDir is required!');
 
     const bucket = new aws.s3.Bucket(`${name}-s3`, {
+      tags,
       website: {
         indexDocument: 'index.html',
         errorDocument: 'index.html',
@@ -52,6 +54,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
     let cdn;
     if (useCDN) {
       cdn = new aws.cloudfront.Distribution(`${name}-cdn`, {
+        tags,
         enabled: true,
         waitForDeployment: false,
         origins: [
@@ -131,6 +134,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
         /* eslint-disable */
         for (const dir of readdirp(buildDir)) {
           const obj = new aws.s3.BucketObject(dir, {
+            tags,
             bucket,
             source: new pulumi.asset.FileAsset(dir),
             key: path.relative(buildDir, dir),
@@ -145,6 +149,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
       /* eslint-disable */
       for (const dir of readdirp(buildDir)) {
         const obj = new aws.s3.BucketObject(dir, { 
+          tags,
           bucket,
           source: new pulumi.asset.FileAsset(dir),
           key: path.relative(buildDir, dir),

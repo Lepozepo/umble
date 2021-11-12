@@ -36,11 +36,13 @@ export default class Lambda extends pulumi.ComponentResource {
       allowedActions = [],
       buildCmd,
       cors = false,
+      tags,
     } = props;
 
     cp.execSync(buildCmd || `cd ${source} && ${installer} install --production && cd ../`, { stdio: 'inherit' });
 
     const role = new aws.iam.Role(`${name}-role`, {
+      tags,
       assumeRolePolicy: aws.iam.assumeRolePolicyForPrincipal({ Service: 'lambda.amazonaws.com' }),
     });
     this.role = role;
@@ -59,6 +61,7 @@ export default class Lambda extends pulumi.ComponentResource {
     this.policy = policy;
 
     const srcBucket = new aws.s3.Bucket(`${name}-lambdaBucket`, {
+      tags,
       forceDestroy: true,
     }, { parent: this });
 
@@ -68,6 +71,7 @@ export default class Lambda extends pulumi.ComponentResource {
     this.internalId = internalId;
 
     const layerSrc = new aws.s3.BucketObject(`${name}-layerSrc`, {
+      tags,
       bucket: srcBucket.bucket,
       source: new pulumi.asset.AssetArchive({
         'nodejs/node_modules': new pulumi.asset.FileArchive(`${source}/node_modules`),
@@ -96,6 +100,7 @@ export default class Lambda extends pulumi.ComponentResource {
 
     const sourceCodeHash = uuid(JSON.stringify(sourceCodeHashObj), uuid.URL);
     const lambdaSrc = new aws.s3.BucketObject(`${name}-lambdaSrc`, {
+      tags,
       bucket: srcBucket.bucket,
       source: new pulumi.asset.AssetArchive(lambdaAssetMap),
       key: 'source.zip',
@@ -104,6 +109,7 @@ export default class Lambda extends pulumi.ComponentResource {
 
     if (websockets?.enabled) {
       this.connectionsTable = new aws.dynamodb.Table('umble-cnx', {
+        tags,
         name: pulumi.interpolate`connections-${stageName}-${internalId.hex}`,
         attributes: [
           {
@@ -120,6 +126,7 @@ export default class Lambda extends pulumi.ComponentResource {
       }, { parent: this });
 
       this.subscriptionsTable = new aws.dynamodb.Table('umble-subs', {
+        tags,
         name: pulumi.interpolate`subscriptions-${stageName}-${internalId.hex}`,
         attributes: [
           {
@@ -141,6 +148,7 @@ export default class Lambda extends pulumi.ComponentResource {
       }, { parent: this });
 
       this.operationsTable = new aws.dynamodb.Table('umble-ops', {
+        tags,
         name: pulumi.interpolate`subscriptionOperations-${stageName}-${internalId.hex}`,
         attributes: [
           {
@@ -157,6 +165,7 @@ export default class Lambda extends pulumi.ComponentResource {
       }, { parent: this });
 
       this.eventsTable = new aws.dynamodb.Table('umble-evts', {
+        tags,
         name: pulumi.interpolate`events-${stageName}-${internalId.hex}`,
         attributes: [
           {
@@ -176,6 +185,7 @@ export default class Lambda extends pulumi.ComponentResource {
     }
 
     const lambdaConfig = {
+      tags,
       runtime,
       timeout,
       handler,
@@ -214,6 +224,9 @@ export default class Lambda extends pulumi.ComponentResource {
 
     const api = new awsx.apigateway.API(`${name}-api`, {
       stageName,
+      stageArgs: {
+        tags,
+      },
       routes: routes?.(httpLambda, props) || [
         {
           path,
@@ -294,6 +307,7 @@ export default class Lambda extends pulumi.ComponentResource {
 
       this.websocketApi = new WebsocketApi(`${name}-ws`, {
         ...omit(otherWebsocketProps, 'enabled'),
+        tags,
         routes: {
           $connect: {
             eventHandler: this.wsLambda,
@@ -320,6 +334,7 @@ export default class Lambda extends pulumi.ComponentResource {
       }, { parent: this });
 
       this.eventsTable.onEvent('umble-evt-handler', this.eventLambda, {
+        tags,
         batchSize: 50,
         maximumRetryAttempts: 4,
         startingPosition: 'LATEST',
