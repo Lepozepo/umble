@@ -308,7 +308,6 @@ export default class Lambda extends pulumi.ComponentResource {
 
       this.websocketApi = new WebsocketApi(`${name}-ws`, {
         ...omit(otherWebsocketProps, 'enabled'),
-        tags,
         routes: {
           $connect: {
             eventHandler: this.wsLambda,
