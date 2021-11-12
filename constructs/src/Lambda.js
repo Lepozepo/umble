@@ -37,6 +37,7 @@ export default class Lambda extends pulumi.ComponentResource {
       buildCmd,
       cors = false,
       tags,
+      bucketObjectTags,
     } = props;
 
     cp.execSync(buildCmd || `cd ${source} && ${installer} install --production && cd ../`, { stdio: 'inherit' });
@@ -71,7 +72,7 @@ export default class Lambda extends pulumi.ComponentResource {
     this.internalId = internalId;
 
     const layerSrc = new aws.s3.BucketObject(`${name}-layerSrc`, {
-      tags,
+      tags: bucketObjectTags,
       bucket: srcBucket.bucket,
       source: new pulumi.asset.AssetArchive({
         'nodejs/node_modules': new pulumi.asset.FileArchive(`${source}/node_modules`),
@@ -100,7 +101,7 @@ export default class Lambda extends pulumi.ComponentResource {
 
     const sourceCodeHash = uuid(JSON.stringify(sourceCodeHashObj), uuid.URL);
     const lambdaSrc = new aws.s3.BucketObject(`${name}-lambdaSrc`, {
-      tags,
+      tags: bucketObjectTags,
       bucket: srcBucket.bucket,
       source: new pulumi.asset.AssetArchive(lambdaAssetMap),
       key: 'source.zip',

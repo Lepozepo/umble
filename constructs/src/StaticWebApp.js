@@ -13,6 +13,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
 
     const {
       tags,
+      bucketObjectTags,
       buildDir,
       buildCmd,
       environment = {},
@@ -134,7 +135,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
         /* eslint-disable */
         for (const dir of readdirp(buildDir)) {
           const obj = new aws.s3.BucketObject(dir, {
-            tags,
+            tags: bucketObjectTags,
             bucket,
             source: new pulumi.asset.FileAsset(dir),
             key: path.relative(buildDir, dir),
@@ -149,7 +150,7 @@ export default class StaticWebApp extends pulumi.ComponentResource {
       /* eslint-disable */
       for (const dir of readdirp(buildDir)) {
         const obj = new aws.s3.BucketObject(dir, { 
-          tags,
+          tags: bucketObjectTags,
           bucket,
           source: new pulumi.asset.FileAsset(dir),
           key: path.relative(buildDir, dir),
