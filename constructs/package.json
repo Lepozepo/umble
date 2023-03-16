@@ -1,6 +1,6 @@
 {
   "name": "umble",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Humble Pulumi Constructs for Apollo/React Developers",
   "main": "index.js",
   "repository": {
