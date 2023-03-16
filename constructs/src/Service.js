@@ -1,12 +1,12 @@
 import pulumi from '@pulumi/pulumi';
 import aws from '@pulumi/aws';
 import awsx from '@pulumi/awsx';
-import tls from '@pulumi/tls';
 import {
   isFunction,
   isObject,
   isNil,
   omitBy,
+  isEmpty,
 } from 'lodash';
 
 export default class Service extends pulumi.ComponentResource {
@@ -16,14 +16,17 @@ export default class Service extends pulumi.ComponentResource {
     const {
       image,
       environment: _environment,
-      memory = 512,
+      container,
+      desiredCount = 1,
       exposePort: port = 4000,
-      useSelfSignedSSL = false,
-      policyArn = aws.iam.AdministratorAccess,
+      policyArn = aws.iam?.AdministratorAccess || aws.iam?.ManagedPolicy?.AdministratorAccess,
       maxScalingCapacity: maxCapacity = 4,
+      minScalingCapacity: minCapacity = 1,
       cpuScalingValue = 70,
       memoryScalingValue = 70,
-      healthCheckUrl = '/.well-known/apollo/server-health',
+      healthCheckUrl,
+      healthCheckOverrides,
+      httpsCertificateArn,
     } = props;
 
     const vpc = props.vpc || awsx.ec2.Vpc.getDefault() || new awsx.ec2.Vpc(`${name}-vpc`, {}, { parent: this });
@@ -43,56 +46,34 @@ export default class Service extends pulumi.ComponentResource {
       name: `${name}-target`.slice(0, 32),
       protocol: 'HTTP',
       port,
-      healthCheck: {
-        path: healthCheckUrl,
-        port: port.toString(),
-        protocol: 'HTTP',
-        interval: 15,
-        healthyThreshold: 3,
-        timeout: 5,
-        unhealthyThreshold: 5,
-      },
+      ...(isEmpty(healthCheckUrl) ? {
+        healthCheck: {
+          path: healthCheckUrl,
+          port: port.toString(),
+          protocol: 'HTTP',
+          interval: 15,
+          healthyThreshold: 3,
+          timeout: 5,
+          unhealthyThreshold: 5,
+          ...healthCheckOverrides,
+        },
+      } : {}),
     }, {
       parent: this,
       deleteBeforeReplace: true,
     });
     this.containerTarget = containerTarget;
 
-    const httpListener = containerTarget.createListener(`${name}-http`, { port: 80 }, { parent: this });
+    const httpListener = containerTarget.createListener(`${name}-http`, { external: true, port: 80 }, { parent: this });
     this.httpListener = httpListener;
 
     let httpsListener;
-    if (useSelfSignedSSL) {
-      const privateKey = new tls.PrivateKey(`${name}-pk`, {
-        algorithm: 'RSA',
-      }, { parent: this });
-
-      const selfSignedCert = new tls.SelfSignedCert(`${name}-certbody`, {
-        allowedUses: [
-          'keyEncipherment',
-          'digitalSignature',
-          'serverAuth',
-        ],
-        keyAlgorithm: 'RSA',
-        privateKeyPem: privateKey.privateKeyPem,
-        subjects: [{
-          commonName: '*.amazonaws.com',
-          organization: 'differential',
-        }],
-        validityPeriodHours: 8640,
-      }, { parent: this });
-
-      const cert = new aws.acm.Certificate(`${name}-cert`, {
-        certificateBody: selfSignedCert.certPem,
-        privateKey: privateKey.privateKeyPem,
-      }, { parent: this });
-
+    if (httpsCertificateArn) {
       httpsListener = containerTarget.createListener(`${name}-https`, {
+        external: true,
         port: 443,
-        certificateArn: cert.arn,
-        sslPolicy: 'ELBSecurityPolicy-2016-08',
+        certificateArn: httpsCertificateArn,
       }, { parent: this });
-      this.httpsListener = httpsListener;
     }
 
     const role = new aws.iam.Role(`${name}-dpl-role`, {
@@ -135,20 +116,20 @@ export default class Service extends pulumi.ComponentResource {
       taskDefinitionArgs: {
         container: {
           image,
-          memory,
           portMappings: [containerTarget],
           environment,
+          ...container,
         },
         executionRole: role,
       },
-      desiredCount: 1,
+      desiredCount,
       waitForSteadyState: false,
     }, { parent: this });
     this.service = service;
 
     const asgTarget = new aws.appautoscaling.Target(`${name}-asg-target`, {
       maxCapacity,
-      minCapacity: 1,
+      minCapacity,
       resourceId: pulumi.interpolate`service/${cluster.cluster.name}/${service.service.name}`,
       roleArn: role.arn,
       scalableDimension: 'ecs:service:DesiredCount',

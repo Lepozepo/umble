@@ -1,6 +1,6 @@
 {
   "name": "umble",
-  "version": "3.0.7",
+  "version": "3.1.0",
   "description": "Humble Pulumi Constructs for Apollo/React Developers",
   "main": "index.js",
   "repository": {
@@ -64,7 +64,6 @@
     "@pulumi/aws": ">=4",
     "@pulumi/awsx": ">=0",
     "@pulumi/pulumi": ">=3",
-    "@pulumi/random": ">=4",
-    "@pulumi/tls": ">=4"
+    "@pulumi/random": ">=4"
   }
 }
