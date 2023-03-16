@@ -61,8 +61,8 @@
   "author": "Marcelo Reyna <lepozepo@gmail.com>",
   "license": "MIT",
   "peerDependencies": {
-    "@pulumi/aws": ">=4",
-    "@pulumi/awsx": ">=0",
+    "@pulumi/aws": ">=5",
+    "@pulumi/awsx": ">=1",
     "@pulumi/pulumi": ">=3",
     "@pulumi/random": ">=4"
   }

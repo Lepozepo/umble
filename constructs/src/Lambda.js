@@ -1,7 +1,7 @@
-import pulumi from '@pulumi/pulumi';
-import aws from '@pulumi/aws';
-import awsx from '@pulumi/awsx';
-import random from '@pulumi/random';
+import * as pulumi from '@pulumi/pulumi';
+import * as aws from '@pulumi/aws';
+import * as awsx from '@pulumi/awsx';
+import * as random from '@pulumi/random';
 import {
   isNil,
   omitBy,

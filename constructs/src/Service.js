@@ -1,6 +1,6 @@
-import pulumi from '@pulumi/pulumi';
-import aws from '@pulumi/aws';
-import awsx from '@pulumi/awsx';
+import * as pulumi from '@pulumi/pulumi';
+import * as aws from '@pulumi/aws';
+import * as awsx from '@pulumi/awsx';
 import {
   isFunction,
   isObject,
@@ -29,7 +29,7 @@ export default class Service extends pulumi.ComponentResource {
       httpsCertificateArn,
     } = props;
 
-    const vpc = props.vpc || new awsx.ec2.Vpc(`${name}-vpc`, {}, { parent: this });
+    const vpc = props.vpc || awsx.ec2.Vpc.getDefault() || new awsx.ec2.Vpc(`${name}-vpc`, {}, { parent: this });
     this.vpc = vpc;
 
     const cluster = new awsx.ecs.Cluster(`${name}-cluster`, { vpc }, { parent: this });

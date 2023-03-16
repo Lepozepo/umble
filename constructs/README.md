@@ -17,18 +17,20 @@ const aws = require('@pulumi/aws');
 const awsx = require('@pulumi/awsx');
 const { Service } = require('umble');
 
+const repo = new awsx.ecr.Repository('repo', {
+  forceDelete: true,
+});
+
+const image = new awsx.ecr.Image('image', {
+  repositoryUrl: repo.url,
+  path: './app',
+});
+
 const api = new Service('api', {
-  image: awsx.ecs.Image.fromPath('umble-test', './app'),
+  image,
   environment: {
     NODE_ENV: 'production',
   },
-  memory: 512,
-  exposePort: 4000,
-  useSelfSignedSSL: false,
-  policyArn: aws.iam.AdministratorAccess,
-  maxScalingCapacity: 4,
-  healthCheckUrl: '/.well-known/apollo/server-health',
-  vpc: awsx.ec2.Vpc.getDefault(),
 });
 
 exports.url = pulumi.interpolate`http://${api.httpListener.endpoint.hostname}`;

@@ -17,5 +17,3 @@ const api = new Service('umble', {
 });
 
 exports.url = pulumi.interpolate`http://${api.httpListener.endpoint.hostname}`;
-
-// pulumi stack init -s dev
