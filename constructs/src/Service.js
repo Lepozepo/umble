@@ -115,7 +115,7 @@ export default class Service extends pulumi.ComponentResource {
       cluster,
       taskDefinitionArgs: {
         container: {
-          image,
+          image: image.imageUri,
           portMappings: [containerTarget],
           environment,
           ...container,
